@@ -19,10 +19,10 @@ import "github.com/speakeasy-api/speakeasy-go-sdk"
 
 func main() {
 	speakeasy.Configure(speakeasy.Configuration{
-		APIKey:     "YOUR API KEY HERE",
-		ProjectID:  "YOUR PROJECT ID HERE",
-		KeysToMask: []string{"password"}, // optional, mask fields you don't want sent to Speakeasy
-		ServerURL:  "localhost://3000",    // optional, don't use default server URL
+		APIKey:     "YOUR API KEY HERE",     // retrieve from future Speakeasy dev dashboard
+		ProjectID:  "YOUR WORKSPACE ID HERE" // workspace id
+		KeysToMask: []string{"password"},    // optional, mask fields you don't want sent to Speakeasy
+		ServerURL:  "localhost://3000",      // optional, don't use default server URL
 	}
 
     // rest of your program.
