@@ -3,6 +3,7 @@ package speakeasy
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/google/uuid"
@@ -14,12 +15,14 @@ import (
 var Config internalConfiguration
 
 const defaultServerURL = "localhost:3000" // TODO: Inject appropriate Speakeasy Registry API endpoint either through env vars
+const defaultApiStatsIntervalSeconds = 300
 
 // Configuration sets up and customizes communication with the Speakeasy Registry API
 type Configuration struct {
-	APIKey         string
-	ServerURL      string
-	SchemaFilePath string
+	APIKey                  string
+	ServerURL               string
+	SchemaFilePath          string
+	ApiStatsIntervalSeconds int
 }
 
 // internalConfiguration is used for communication with Speakeasy Registry API
@@ -31,9 +34,10 @@ type internalConfiguration struct {
 }
 
 type SpeakeasyApp struct {
-	Lock     sync.RWMutex
-	ApiStats map[string]ApiStats
-	Schema   *openapi3.T
+	SendStatsChannel chan bool
+	Lock             sync.RWMutex
+	ApiStats         map[string]ApiStats
+	Schema           *openapi3.T
 }
 
 func Configure(config Configuration) (*SpeakeasyApp, error) {
@@ -42,6 +46,11 @@ func Configure(config Configuration) (*SpeakeasyApp, error) {
 		Config.ServerURL = config.ServerURL
 	} else {
 		Config.ServerURL = defaultServerURL
+	}
+	if config.ApiStatsIntervalSeconds != 0 {
+		Config.ApiStatsIntervalSeconds = config.ApiStatsIntervalSeconds
+	} else {
+		Config.ApiStatsIntervalSeconds = defaultApiStatsIntervalSeconds
 	}
 	if config.APIKey != "" {
 		Config.APIKey = config.APIKey
@@ -63,7 +72,9 @@ func Configure(config Configuration) (*SpeakeasyApp, error) {
 		return nil, err
 	}
 	// Call goroutine to send Api stats to Speakeasy
-	go app.sendApiStatsToSpeakeasy(app.ApiStats, 5)
+	ticker := time.NewTicker(time.Duration(Config.ApiStatsIntervalSeconds) * time.Second)
+	app.SendStatsChannel = make(chan bool)
+	go app.sendApiStatsToSpeakeasy(app.ApiStats, ticker, app.SendStatsChannel)
 
 	return app, nil
 }
@@ -73,12 +84,10 @@ func (app SpeakeasyApp) setApiStatsFromSchema(ctx context.Context, schemaFilePat
 	if err != nil {
 		return err
 	}
-	var apiStats = make(map[string]ApiStats)
 	for path := range app.Schema.Paths {
 		// TODO register api here and get ApiId in lieu of path below
-		apiStats[path] = ApiStats{NumCalls: 0, NumErrors: 0, NumUniqueCustomers: 0}
+		app.ApiStats[path] = ApiStats{NumCalls: 0, NumErrors: 0, NumUniqueCustomers: 0}
 	}
-	app.ApiStats = apiStats
 	return nil
 }
 

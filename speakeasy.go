@@ -35,36 +35,39 @@ const (
 // 	_, _ = client.Do(req)
 // }
 
-func (app SpeakeasyApp) sendApiStatsToSpeakeasy(apiStats map[string]ApiStats, intervalMinutes time.Duration) {
-	for range time.Tick(intervalMinutes * time.Minute) {
-		tick := time.Now()
-		ctx := log.WithFields(context.Background(), zap.Time("timestamp", tick))
-		handlerInfoList := app.getHandlerInfo(apiStats)
-
-		// Convert map state to ApiData
-		apiData := &ApiData{ApiKey: Config.APIKey, ApiServerId: Config.apiServerId.String(), Handlers: handlerInfoList}
-		bytesRepresentation, err := json.Marshal(apiData)
-		if err != nil {
-			log.From(ctx).Error("failed to encode ApiData", zap.Error(err))
+func (app SpeakeasyApp) sendApiStatsToSpeakeasy(apiStats map[string]ApiStats, ticker *time.Ticker, done chan bool) {
+	for {
+		select {
+		case <-done:
 			return
-		}
+		case t := <-ticker.C:
+			ctx := log.WithFields(context.Background(), zap.Time("timestamp", t))
+			handlerInfoList := app.getHandlerInfo(apiStats)
 
-		metricsEndpoint := Config.ServerURL + "/metrics"
-		req, err := http.NewRequest(http.MethodPost, metricsEndpoint, bytes.NewBuffer(bytesRepresentation))
-		if err != nil {
-			log.From(ctx).Error("failed to create http request for Speakeasy metrics endpoint", zap.String("req_path", metricsEndpoint), zap.Error(err))
-			return
-		}
-		// Set the content type from the writer, it includes necessary boundary as well
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("x-api-key", Config.APIKey)
+			// Convert map state to ApiData
+			apiData := &ApiData{ApiKey: Config.APIKey, ApiServerId: Config.apiServerId.String(), Handlers: handlerInfoList}
+			bytesRepresentation, err := json.Marshal(apiData)
+			if err != nil {
+				log.From(ctx).Error("failed to encode ApiData", zap.Error(err))
+				return
+			}
+			metricsEndpoint := Config.ServerURL + "/metrics"
+			req, err := http.NewRequest(http.MethodPost, metricsEndpoint, bytes.NewBuffer(bytesRepresentation))
+			if err != nil {
+				log.From(ctx).Error("failed to create http request for Speakeasy metrics endpoint", zap.String("req_path", metricsEndpoint), zap.Error(err))
+				return
+			}
+			// Set the content type from the writer, it includes necessary boundary as well
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("x-api-key", Config.APIKey)
 
-		// Do the request
-		client := &http.Client{Timeout: timeoutDuration}
-		startTime := time.Now()
-		_, err = client.Do(req)
-		if err != nil {
-			log.From(ctx).Error("failed to get valid response for http request", zap.Time("start_time", startTime), zap.String("method", req.Method), zap.String("request_uri", req.RequestURI), zap.Duration("request_duration", time.Since(startTime)))
+			// Do the request
+			client := &http.Client{Timeout: timeoutDuration}
+			startTime := time.Now()
+			_, err = client.Do(req)
+			if err != nil {
+				log.From(ctx).Error("failed to get valid response for http request", zap.Time("start_time", startTime), zap.String("method", req.Method), zap.String("request_uri", req.RequestURI), zap.Duration("request_duration", time.Since(startTime)))
+			}
 		}
 	}
 }

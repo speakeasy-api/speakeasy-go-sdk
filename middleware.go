@@ -39,36 +39,9 @@ func (app SpeakeasyApp) Middleware(next http.Handler) http.Handler {
 
 		next.ServeHTTP(&rec, r)
 
-		// Disable sending every request/response to Speakeasy for now
-		// copy the original headers
-		// for k, v := range rec.Header() {
-		// 	w.Header()[k] = v
-		// }
-
-		// copy the original code
-		// w.WriteHeader(rec.Code)
-
-		// write the original body
-		// _, err := w.Write(rec.Body.Bytes())
-		// if err != nil {
-		// 	return
-		// }
-
 		ctx := log.WithFields(r.Context(), zap.Time("start_time", startTime), zap.String("method", r.Method), zap.String("request_uri", r.RequestURI), zap.Duration("request_duration", time.Since(startTime)))
 
 		if !errors.Is(errReqInfo, ErrNotJson) {
-			// Disable sending every request/response to Speakeasy for now
-			// ti := MetaData{
-			// 	ApiKey:      Config.APIKey,
-			// 	WorkspaceId: Config.WorkspaceId,
-			// 	Version:     speakasyVersion,
-			// 	Sdk:         sdkName,
-			// 	Data: DataInfo{
-			// 		Server:   Config.serverInfo,
-			// 		Language: Config.languageInfo,
-			// 		Request:  requestInfo,
-			// 		Response: getResponseInfo(rec, startTime),
-			// 	},
 
 			router, err := gorillamux.NewRouter(app.Schema)
 			if err != nil {
@@ -88,6 +61,7 @@ func (app SpeakeasyApp) Middleware(next http.Handler) http.Handler {
 }
 
 func (app SpeakeasyApp) updateApiStatsByResponseStatus(path string, status int) {
+	// TODO: Update number of unique customers here as well
 	app.Lock.Lock()
 	defer app.Lock.Unlock()
 
