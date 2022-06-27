@@ -5,11 +5,28 @@ import (
 )
 
 type MetaData struct {
-	ApiKey      string   `json:"api_key"`
-	WorkspaceId string   `json:"workspace_id"`
-	Version     float32  `json:"version"`
-	Sdk         string   `json:"sdk"`
-	Data        DataInfo `json:"data"`
+	ApiKey  string   `json:"api_key"`
+	Version float32  `json:"version"`
+	Sdk     string   `json:"sdk"`
+	Data    DataInfo `json:"data"`
+}
+
+type ApiData struct {
+	ApiKey      string        `json:"api_key"`
+	ApiServerId string        `json:"api_server_id"`
+	Handlers    []HandlerInfo `json:"handlers"`
+}
+
+type HandlerInfo struct {
+	// TODO: This should be api_id instead of path once we register Apis from speakeasy.Configure
+	Path     string   `json:"path"`
+	ApiStats ApiStats `json:"api_info"`
+}
+
+type ApiStats struct {
+	NumCalls           int `json:"number_of_calls"`
+	NumErrors          int `json:"number_of_errors"`
+	NumUniqueCustomers int `json:"number_of_unique_customers"`
 }
 
 type DataInfo struct {

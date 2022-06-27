@@ -21,6 +21,8 @@ type TestSuite struct {
 
 	speakeasyMockMux    *http.ServeMux
 	speakeasyMockServer *httptest.Server
+
+	speakeasyApp *SpeakeasyApp
 }
 
 func Test(t *testing.T) {
@@ -32,7 +34,9 @@ func (s *TestSuite) SetupSubTest() {
 	s.testServer = httptest.NewServer(s.router)
 	s.speakeasyMockMux = http.NewServeMux()
 	s.speakeasyMockServer = httptest.NewServer(s.speakeasyMockMux)
-	Configure(Configuration{ServerURL: s.speakeasyMockServer.URL, APIKey: "key", WorkspaceId: "workspace_id"})
+	var err error
+	s.speakeasyApp, err = Configure(Configuration{ServerURL: s.speakeasyMockServer.URL, APIKey: "key", SchemaFilePath: "./test_fixtures/valid_openapi_schema.yml"})
+	s.Require().NoError(err)
 }
 
 func (s *TestSuite) TearDownSubTest() {
@@ -50,86 +54,108 @@ func (s *TestSuite) Test_JsonFormat() {
 }
 
 func (s *TestSuite) Test_Middleware() {
-	testCases := map[string]struct {
-		requestJson        string
-		responseJson       string
-		status             int
-		requestHeaderKey   string
-		requestHeaderValue string
-		respHeaderKey      string
-		respHeaderValue    string
-		speakeasyCalled    bool
-	}{
-		"happy-path": {
+	type args struct {
+		requestJson, responseJson, requestHeaderKey, requestHeaderValue, respHeaderKey, respHeaderValue string
+		status                                                                                          int
+	}
 
-			requestJson:        `{"id":2}`,
-			responseJson:       `{"id":2, "name":"test"}`,
-			status:             http.StatusOK,
-			requestHeaderKey:   "Req-K-200",
-			requestHeaderValue: "Req-V-200",
-			respHeaderKey:      "Resp-K-200",
-			respHeaderValue:    "Resp-V-200",
-			speakeasyCalled:    true,
+	tests := []struct {
+		name                string
+		args                args
+		wantSpeakeasyCalled bool
+		wantApiData         *ApiData
+	}{
+		{
+			name: "happy-path",
+			args: args{
+				requestJson:        `{"id":2}`,
+				responseJson:       `{"id":2, "name":"test"}`,
+				status:             http.StatusOK,
+				requestHeaderKey:   "Req-K-200",
+				requestHeaderValue: "Req-V-200",
+				respHeaderKey:      "Resp-K-200",
+				respHeaderValue:    "Resp-V-200",
+			},
+			wantSpeakeasyCalled: true,
+			wantApiData: &ApiData{
+				ApiKey:      "key",
+				ApiServerId: "3453",
+				Handlers:    []HandlerInfo{{Path: "/test", ApiStats: ApiStats{NumCalls: 0, NumErrors: 0, NumUniqueCustomers: 0}}},
+			},
 		},
-		"status-nok": {
-			requestJson:        `{"id":3}`,
-			responseJson:       `{"id":2, "name":"test", "errors":true}`,
-			status:             http.StatusConflict,
-			requestHeaderKey:   "Req-K-409",
-			requestHeaderValue: "Req-V-409",
-			respHeaderKey:      "Resp-K-409",
-			respHeaderValue:    "Resp-V-409",
-			speakeasyCalled:    true,
+		{
+			name: "status-nok",
+			args: args{
+				requestJson:        `{"id":3}`,
+				responseJson:       `{"id":2, "name":"test", "errors":true}`,
+				status:             http.StatusConflict,
+				requestHeaderKey:   "Req-K-409",
+				requestHeaderValue: "Req-V-409",
+				respHeaderKey:      "Resp-K-409",
+				respHeaderValue:    "Resp-V-409",
+			},
+			wantSpeakeasyCalled: true,
+			wantApiData: &ApiData{
+				ApiKey:      "key",
+				ApiServerId: "3453",
+				Handlers:    []HandlerInfo{{Path: "/test", ApiStats: ApiStats{NumCalls: 0, NumErrors: 0, NumUniqueCustomers: 0}}},
+			},
 		},
-		"req-not-json": {
-			requestJson:     `{"id4`,
-			responseJson:    `{}`,
-			status:          http.StatusOK,
-			speakeasyCalled: false,
+		{
+			name: "req-not-json",
+			args: args{
+				requestJson:  `{"id4`,
+				responseJson: `{}`,
+				status:       http.StatusOK,
+			},
+			wantSpeakeasyCalled: false,
 		},
-		"resp-not-json": {
-			requestJson:     `{"id":5}`,
-			responseJson:    `{"`,
-			status:          http.StatusOK,
-			speakeasyCalled: true,
+		{
+			name: "resp-not-json",
+			args: args{
+				requestJson:  `{"id":5}`,
+				responseJson: `{"`,
+				status:       http.StatusOK,
+			},
+			wantSpeakeasyCalled: true,
 		},
 	}
 
-	for tn, tc := range testCases {
+	for _, tt := range tests {
 		s.SetupSubTest()
 		speakeasyCalled := false
 
-		s.speakeasyMockMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			var speakeasyMetadata MetaData
+		s.speakeasyMockMux.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
+			var speakeasyApiData ApiData
 			decoder := json.NewDecoder(r.Body)
-			s.Require().NoError(decoder.Decode(&speakeasyMetadata))
-			s.Require().Equal(getOsInfo(), speakeasyMetadata.Data.Server.Os)
+			s.Require().NoError(decoder.Decode(&speakeasyApiData))
+			s.Require().Equal(speakeasyApiData, tt.wantApiData)
 			speakeasyCalled = true
 		})
 
-		s.router.With(Middleware).Get("/test", func(w http.ResponseWriter, r *http.Request) {
-			s.Require().Equal(tc.requestHeaderValue, r.Header.Get(tc.requestHeaderKey))
-			w.Header()[tc.respHeaderKey] = []string{tc.respHeaderValue}
-			w.WriteHeader(tc.status)
-			_, err := w.Write([]byte(tc.responseJson))
+		s.router.With(s.speakeasyApp.Middleware).Get("/test", func(w http.ResponseWriter, r *http.Request) {
+			s.Require().Equal(tt.args.requestHeaderValue, r.Header.Get(tt.args.requestHeaderKey))
+			w.Header()[tt.args.respHeaderKey] = []string{tt.args.respHeaderValue}
+			w.WriteHeader(tt.args.status)
+			_, err := w.Write([]byte(tt.args.responseJson))
 			if err != nil {
 				return
 			}
 		})
 
 		requestHeaders := map[string]string{}
-		if len(tc.requestHeaderKey) > 0 {
-			requestHeaders[tc.requestHeaderKey] = tc.requestHeaderValue
+		if len(tt.args.requestHeaderKey) > 0 {
+			requestHeaders[tt.args.requestHeaderKey] = tt.args.requestHeaderValue
 		}
-		resp, respBody := s.testRequest(http.MethodGet, "/test", tc.requestJson, requestHeaders)
-		s.Require().Equal(tc.responseJson, respBody, tn)
-		s.Require().Equal(tc.status, resp.StatusCode, tn)
-		s.Require().Equal(tc.respHeaderValue, resp.Header.Get(tc.respHeaderKey), tn)
+		resp, respBody := s.testRequest(http.MethodGet, "/test", tt.args.requestJson, requestHeaders)
+		s.Require().Equal(tt.args.responseJson, respBody, tt.name)
+		s.Require().Equal(tt.args.status, resp.StatusCode, tt.name)
+		s.Require().Equal(tt.args.respHeaderValue, resp.Header.Get(tt.args.respHeaderKey), tt.name)
 
 		// wait on the async speakeasy call to finish
 		time.Sleep(1 * time.Second)
 
-		s.Require().Equal(tc.speakeasyCalled, speakeasyMuxCalled, tn)
+		s.Require().Equal(tt.wantSpeakeasyCalled, speakeasyCalled, tt.name)
 		s.TearDownSubTest()
 	}
 }

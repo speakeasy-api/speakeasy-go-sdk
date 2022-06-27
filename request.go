@@ -7,7 +7,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"regexp"
 	"time"
 )
 
@@ -25,7 +24,7 @@ var ErrNotJson = errors.New("request body is not JSON")
 
 // Get details about the request
 func getRequestInfo(r *http.Request, startTime time.Time) (RequestInfo, error) {
-	defer dontPanic()
+	defer dontPanic(r.Context())
 
 	headers := make(map[string]string)
 	for k := range r.Header {
@@ -91,15 +90,14 @@ func copyAndMaskJson(src map[string]interface{}, dest map[string]interface{}) {
 			dest[key] = map[string]interface{}{}
 			copyAndMaskJson(src[key].(map[string]interface{}), dest[key].(map[string]interface{}))
 		default:
+			// Disabling masking for now
 			// if JSON key is in the list of keys to mask, replace it with a * string of the same length
-			_, exists := Config.KeysMap[key]
-			if exists {
-				re := regexp.MustCompile(".")
-				maskedValue := re.ReplaceAllString(value.(string), "*")
-				dest[key] = maskedValue
-			} else {
-				dest[key] = value
-			}
+			// _, exists := Config.KeysMap[key]
+			// if exists {
+			// 	re := regexp.MustCompile(".")
+			// 	maskedValue := re.ReplaceAllString(value.(string), "*")
+			// 	dest[key] = maskedValue
+			dest[key] = value
 		}
 	}
 }

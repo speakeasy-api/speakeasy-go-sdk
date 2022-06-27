@@ -25,7 +25,7 @@ type ErrorInfo struct {
 
 // Extract information from the response recorder
 func getResponseInfo(response *httptest.ResponseRecorder, startTime time.Time) ResponseInfo {
-	defer dontPanic()
+	defer dontPanic(response.Result().Request.Context())
 	responseBytes := response.Body.Bytes()
 
 	errInfo := ErrorInfo{}
