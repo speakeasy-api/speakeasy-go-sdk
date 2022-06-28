@@ -1,11 +1,16 @@
 package speakeasy
 
 import (
+	"context"
 	"errors"
-	"log"
+	"fmt"
 	"net/http"
-	"net/http/httptest"
 	"time"
+
+	"github.com/getkin/kin-openapi/routers"
+	"github.com/getkin/kin-openapi/routers/gorillamux"
+	"github.com/speakeasy-api/speakeasy-go-sdk/internal/log"
+	"go.uber.org/zap"
 )
 
 const (
@@ -13,55 +18,64 @@ const (
 	sdkName         = "go"
 )
 
-func Middleware(next http.Handler) http.Handler {
+type statusRecorder struct {
+	http.ResponseWriter
+	status int
+}
+
+func (rec *statusRecorder) WriteHeader(code int) {
+	rec.status = code
+	rec.ResponseWriter.WriteHeader(code)
+}
+
+func (app SpeakeasyApp) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		startTime := time.Now()
 
-		requestInfo, errReqInfo := getRequestInfo(r, startTime)
+		_, errReqInfo := getRequestInfo(r, startTime)
 
-		// intercept the response so it can be copied
-		rec := httptest.NewRecorder()
+		// intercept the status code
+		rec := statusRecorder{w, 200}
 
-		// do the actual request as intended
-		next.ServeHTTP(rec, r)
-		// after this finishes, we have the response recorded
+		next.ServeHTTP(&rec, r)
 
-		// copy the original headers
-		for k, v := range rec.Header() {
-			w.Header()[k] = v
-		}
-
-		// copy the original code
-		w.WriteHeader(rec.Code)
-
-		// write the original body
-		_, err := w.Write(rec.Body.Bytes())
-		if err != nil {
-			return
-		}
+		ctx := log.WithFields(r.Context(), zap.Time("start_time", startTime), zap.String("method", r.Method), zap.String("request_uri", r.RequestURI), zap.Duration("request_duration", time.Since(startTime)))
 
 		if !errors.Is(errReqInfo, ErrNotJson) {
-			ti := MetaData{
-				ApiKey:      Config.APIKey,
-				WorkspaceId: Config.WorkspaceId,
-				Version:     speakasyVersion,
-				Sdk:         sdkName,
-				Data: DataInfo{
-					Server:   Config.serverInfo,
-					Language: Config.languageInfo,
-					Request:  requestInfo,
-					Response: getResponseInfo(rec, startTime),
-				},
+
+			router, err := gorillamux.NewRouter(app.Schema)
+			if err != nil {
+				log.From(ctx).Error("failed to create router for OpenAPI schema", zap.Error(err))
+				return
 			}
-			// don't block execution while sending data to Speakeasy
-			go sendToSpeakeasy(ti)
+			route, _, err := router.FindRoute(r)
+			if !errors.Is(err, routers.ErrPathNotFound) {
+				app.updateApiStatsByResponseStatus(route.Path, rec.status)
+			} else {
+				log.From(ctx).Error("failed to find schema path for request in router", zap.Error(err))
+			}
+		} else {
+			log.From(ctx).Error("malformed request", zap.Error(errReqInfo))
 		}
 	})
 }
 
+func (app SpeakeasyApp) updateApiStatsByResponseStatus(path string, status int) {
+	// TODO: Update number of unique customers here as well
+	app.Lock.Lock()
+	defer app.Lock.Unlock()
+
+	stats := app.ApiStats[path]
+	stats.NumCalls += 1
+	if status < 200 || status >= 300 {
+		stats.NumErrors += 1
+	}
+	app.ApiStats[path] = stats
+}
+
 // If anything happens to go wrong inside one of speakasy-go-sdk internals, recover from panic and continue
-func dontPanic() {
+func dontPanic(ctx context.Context) {
 	if err := recover(); err != nil {
-		log.Printf("speakeasy sdk panic: %s", err)
+		log.From(ctx).Error(fmt.Sprintf("speakeasy sdk panic %s", err))
 	}
 }
