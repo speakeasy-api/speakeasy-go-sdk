@@ -18,8 +18,7 @@ type ApiData struct {
 }
 
 type HandlerInfo struct {
-	// TODO: This should be api_id instead of path once we register Apis from speakeasy.Configure
-	Path     string   `json:"path"`
+	ApiId    uint     `json:"api_id"`
 	ApiStats ApiStats `json:"api_info"`
 }
 

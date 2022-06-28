@@ -2,6 +2,10 @@ package speakeasy
 
 import (
 	"context"
+	"hash/fnv"
+	"net/http"
+	urlPath "path"
+	"strconv"
 	"sync"
 	"time"
 
@@ -9,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jinzhu/copier"
 	"github.com/speakeasy-api/speakeasy-go-sdk/internal/log"
+	"github.com/speakeasy-api/speakeasy-go-sdk/internal/models"
 	"go.uber.org/zap"
 )
 
@@ -20,6 +25,7 @@ const defaultApiStatsIntervalSeconds = 300
 // Configuration sets up and customizes communication with the Speakeasy Registry API
 type Configuration struct {
 	APIKey                  string
+	WorkspaceId             string
 	ServerURL               string
 	SchemaFilePath          string
 	ApiStatsIntervalSeconds int
@@ -27,68 +33,105 @@ type Configuration struct {
 
 // internalConfiguration is used for communication with Speakeasy Registry API
 type internalConfiguration struct {
-	Configuration
-	apiServerId  uuid.UUID
 	serverInfo   ServerInfo
 	languageInfo LanguageInfo
 }
 
 type SpeakeasyApp struct {
-	SendStatsChannel chan bool
-	Lock             sync.RWMutex
-	ApiStats         map[string]ApiStats
-	Schema           *openapi3.T
+	Configuration
+	apiServerId    uuid.UUID
+	CancelApiStats context.CancelFunc
+	Lock           sync.RWMutex
+	ApiStats       map[uint]ApiStats
+	ApiByPath      map[string]models.Api
+	Schema         *openapi3.T
 }
 
 func Configure(config Configuration) (*SpeakeasyApp, error) {
 	defer dontPanic(context.Background())
+	app := &SpeakeasyApp{Lock: sync.RWMutex{}, ApiStats: make(map[uint]ApiStats), ApiByPath: make(map[string]models.Api), Schema: &openapi3.T{}}
 	if config.ServerURL != "" {
-		Config.ServerURL = config.ServerURL
+		app.ServerURL = config.ServerURL
 	} else {
-		Config.ServerURL = defaultServerURL
+		app.ServerURL = defaultServerURL
 	}
 	if config.ApiStatsIntervalSeconds != 0 {
-		Config.ApiStatsIntervalSeconds = config.ApiStatsIntervalSeconds
+		app.ApiStatsIntervalSeconds = config.ApiStatsIntervalSeconds
 	} else {
-		Config.ApiStatsIntervalSeconds = defaultApiStatsIntervalSeconds
+		app.ApiStatsIntervalSeconds = defaultApiStatsIntervalSeconds
 	}
-	if config.APIKey != "" {
-		Config.APIKey = config.APIKey
-	}
-	if config.SchemaFilePath != "" {
-		Config.SchemaFilePath = config.SchemaFilePath
-	}
+	app.APIKey = config.APIKey
+	app.WorkspaceId = config.WorkspaceId
+	app.SchemaFilePath = config.SchemaFilePath
 
-	Config.apiServerId = uuid.New()
+	app.apiServerId = uuid.New()
 	Config.serverInfo = getServerInfo()
 	Config.languageInfo = getLanguageInfo()
 
-	app := &SpeakeasyApp{Lock: sync.RWMutex{}, ApiStats: make(map[string]ApiStats), Schema: &openapi3.T{}}
-	ctx := log.WithFields(context.Background(), zap.String("schema_file_path", Config.SchemaFilePath))
+	ctx := log.WithFields(context.Background(), zap.String("schema_file_path", app.SchemaFilePath))
+
 	// Populate map with all schema paths
-	err := app.setApiStatsFromSchema(ctx, Config.SchemaFilePath)
+	err := app.registerApiAndSetStats(ctx, app.SchemaFilePath)
 	if err != nil {
 		log.From(ctx).Error("failing speakeasy configuration; unable to load OpenAPI schema", zap.Error(err))
 		return nil, err
 	}
 	// Call goroutine to send Api stats to Speakeasy
-	ticker := time.NewTicker(time.Duration(Config.ApiStatsIntervalSeconds) * time.Second)
-	app.SendStatsChannel = make(chan bool)
-	go app.sendApiStatsToSpeakeasy(app.ApiStats, ticker, app.SendStatsChannel)
+	ticker := time.NewTicker(time.Duration(app.ApiStatsIntervalSeconds) * time.Second)
+
+	var cancelCtx context.Context
+	cancelCtx, app.CancelApiStats = context.WithCancel(context.Background())
+	go app.sendApiStatsToSpeakeasy(cancelCtx, app.ApiStats, ticker)
 
 	return app, nil
 }
 
-func (app SpeakeasyApp) setApiStatsFromSchema(ctx context.Context, schemaFilePath string) error {
+func (app SpeakeasyApp) registerApiAndSetStats(ctx context.Context, schemaFilePath string) error {
 	err := app.loadOpenApiSchema(ctx, schemaFilePath)
 	if err != nil {
 		return err
 	}
-	for path := range app.Schema.Paths {
-		// TODO register api here and get ApiId in lieu of path below
-		app.ApiStats[path] = ApiStats{NumCalls: 0, NumErrors: 0, NumUniqueCustomers: 0}
+	for path, pathItem := range app.Schema.Paths {
+		// register api
+		method, op := methodAndOpFromPathItem(ctx, path, pathItem)
+		apiId := hash(app.WorkspaceId + method + path)
+		api := models.Api{ID: apiId, WorkspaceId: app.WorkspaceId, Method: method, Path: path, DisplayName: op.OperationID, Description: op.Summary}
+		go app.registerApi(api)
+		app.ApiStats[apiId] = ApiStats{NumCalls: 0, NumErrors: 0, NumUniqueCustomers: 0}
+		app.ApiByPath[path] = api
+
+		// register schema
+		apiIdStr := strconv.FormatUint(uint64(apiId), 10)
+		schema := models.Schema{ID: hash(apiIdStr), ApiId: apiIdStr, VersionId: app.Schema.Info.Version, Filename: urlPath.Base(schemaFilePath), Description: app.Schema.Info.Description}
+		mimeType := "application/json"
+		go app.registerSchema(schema, mimeType)
 	}
 	return nil
+}
+
+func methodAndOpFromPathItem(ctx context.Context, path string, pathItem *openapi3.PathItem) (string, *openapi3.Operation) {
+	if pathItem.Get != nil {
+		return http.MethodGet, pathItem.Get
+	} else if pathItem.Post != nil {
+		return http.MethodPost, pathItem.Post
+	} else if pathItem.Connect != nil {
+		return http.MethodConnect, pathItem.Connect
+	} else if pathItem.Put != nil {
+		return http.MethodPut, pathItem.Put
+	} else if pathItem.Patch != nil {
+		return http.MethodPatch, pathItem.Patch
+	} else if pathItem.Delete != nil {
+		return http.MethodDelete, pathItem.Delete
+	} else if pathItem.Head != nil {
+		return http.MethodHead, pathItem.Head
+	} else if pathItem.Options != nil {
+		return http.MethodOptions, pathItem.Options
+	} else if pathItem.Trace != nil {
+		return http.MethodTrace, pathItem.Trace
+	} else {
+		log.From(ctx).Error("supported HTTP method not found in schema's path item", zap.String("path", path), zap.Any("path_item", pathItem))
+	}
+	return "", nil
 }
 
 func (app SpeakeasyApp) loadOpenApiSchema(ctx context.Context, schemaFilePath string) error {
@@ -106,4 +149,10 @@ func (app SpeakeasyApp) loadOpenApiSchema(ctx context.Context, schemaFilePath st
 	}
 	copier.Copy(app.Schema, schema)
 	return nil
+}
+
+func hash(s string) uint {
+	h := fnv.New32a()
+	h.Write([]byte(s))
+	return uint(h.Sum32())
 }

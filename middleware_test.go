@@ -49,7 +49,7 @@ func (s *TestSuite) SetupSubTest(wantConfErr error, schemaPath string) error {
 func (s *TestSuite) TearDownSubTest() {
 	s.testServer.Close()
 	s.speakeasyMockServer.Close()
-	s.speakeasyApp.SendStatsChannel <- true
+	s.speakeasyApp.CancelApiStats()
 	// wait on the goroutine sending speakeasy stats to terminate
 	time.Sleep(1 * time.Second)
 }
