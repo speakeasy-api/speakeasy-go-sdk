@@ -48,10 +48,10 @@ func (app SpeakeasyApp) sendApiStatsToSpeakeasy(ctx context.Context, apiStats ma
 			return
 		case t := <-ticker.C:
 			ctx := log.WithFields(ctx, zap.Time("timestamp", t))
-			handlerInfoList := app.getHandlerInfo(apiStats)
+			handlerInfo := HandlerInfo{ApiStatsById: apiStats}
 
 			// Convert map state to ApiData
-			apiData := &ApiData{ApiKey: app.APIKey, ApiServerId: app.apiServerId.String(), Handlers: handlerInfoList}
+			apiData := &ApiData{ApiKey: app.APIKey, ApiServerId: app.apiServerId.String(), Handlers: handlerInfo}
 			bytesRepresentation, err := json.Marshal(apiData)
 			if err != nil {
 				log.From(ctx).Error("failed to encode ApiData", zap.Error(err))
@@ -188,14 +188,4 @@ func (app SpeakeasyApp) registerSchema(schema models.Schema, mimeType string) {
 	if err != nil {
 		log.From(ctx).Error("failed to get valid response for http request", zap.Time("start_time", startTime), zap.String("method", req.Method), zap.String("request_uri", req.RequestURI), zap.Duration("request_duration", time.Since(startTime)))
 	}
-}
-
-func (app SpeakeasyApp) getHandlerInfo(apiStats map[uint]ApiStats) []HandlerInfo {
-	app.Lock.RLock()
-	defer app.Lock.RUnlock()
-	var HandlerInfoList []HandlerInfo
-	for apiId, stats := range apiStats {
-		HandlerInfoList = append(HandlerInfoList, HandlerInfo{ApiId: apiId, ApiStats: stats})
-	}
-	return HandlerInfoList
 }

@@ -12,14 +12,13 @@ type MetaData struct {
 }
 
 type ApiData struct {
-	ApiKey      string        `json:"api_key"`
-	ApiServerId string        `json:"api_server_id"`
-	Handlers    []HandlerInfo `json:"handlers"`
+	ApiKey      string      `json:"api_key"`
+	ApiServerId string      `json:"api_server_id"`
+	Handlers    HandlerInfo `json:"handlers"`
 }
 
 type HandlerInfo struct {
-	ApiId    uint     `json:"api_id"`
-	ApiStats ApiStats `json:"api_info"`
+	ApiStatsById map[uint]ApiStats
 }
 
 type ApiStats struct {

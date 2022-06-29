@@ -65,15 +65,15 @@ func (s *TestSuite) Test_JsonFormat() {
 
 func (s *TestSuite) Test_Middleware() {
 	type args struct {
-		requestJson, responseJson, requestHeaderKey, requestHeaderValue, respHeaderKey, respHeaderValue, schemaPath string
-		status                                                                                                      int
+		requestJson, responseJson, requestHeaderKey, requestHeaderValue, apiPath, respHeaderKey, respHeaderValue, schemaPath string
+		status                                                                                                               int
 	}
 
 	tests := []struct {
-		name        string
-		args        args
-		wantApiData *ApiData
-		wantConfErr error
+		name         string
+		args         args
+		wantApiStats *ApiStats
+		wantConfErr  error
 	}{
 		{
 			name: "happy-path",
@@ -83,14 +83,12 @@ func (s *TestSuite) Test_Middleware() {
 				status:             http.StatusOK,
 				requestHeaderKey:   "Req-K-200",
 				requestHeaderValue: "Req-V-200",
+				apiPath:            "/test",
 				respHeaderKey:      "Resp-K-200",
 				respHeaderValue:    "Resp-V-200",
 				schemaPath:         "./test_fixtures/valid_openapi_schema.yml",
 			},
-			wantApiData: &ApiData{
-				ApiKey:   "key",
-				Handlers: []HandlerInfo{{Path: "/test", ApiStats: ApiStats{NumCalls: 1, NumErrors: 0, NumUniqueCustomers: 0}}},
-			},
+			wantApiStats: &ApiStats{NumCalls: 1, NumErrors: 0, NumUniqueCustomers: 0},
 		},
 		{
 			name: "status-nok",
@@ -100,27 +98,23 @@ func (s *TestSuite) Test_Middleware() {
 				status:             http.StatusConflict,
 				requestHeaderKey:   "Req-K-409",
 				requestHeaderValue: "Req-V-409",
+				apiPath:            "/test",
 				respHeaderKey:      "Resp-K-409",
 				respHeaderValue:    "Resp-V-409",
 				schemaPath:         "./test_fixtures/valid_openapi_schema.yml",
 			},
-			wantApiData: &ApiData{
-				ApiKey:   "key",
-				Handlers: []HandlerInfo{{Path: "/test", ApiStats: ApiStats{NumCalls: 1, NumErrors: 1, NumUniqueCustomers: 0}}},
-			},
+			wantApiStats: &ApiStats{NumCalls: 1, NumErrors: 1, NumUniqueCustomers: 0},
 		},
 		{
 			name: "req-not-json",
 			args: args{
 				requestJson:  `{"id4`,
+				apiPath:      "/test",
 				responseJson: `{}`,
 				status:       http.StatusOK,
 				schemaPath:   "./test_fixtures/valid_openapi_schema.yml",
 			},
-			wantApiData: &ApiData{
-				ApiKey:   "key",
-				Handlers: []HandlerInfo{{Path: "/test", ApiStats: ApiStats{NumCalls: 0, NumErrors: 0, NumUniqueCustomers: 0}}},
-			},
+			wantApiStats: &ApiStats{NumCalls: 0, NumErrors: 0, NumUniqueCustomers: 0},
 		},
 		{
 			name: "valid-schema-wrong-path",
@@ -130,14 +124,16 @@ func (s *TestSuite) Test_Middleware() {
 				status:             http.StatusOK,
 				requestHeaderKey:   "Req-K-200",
 				requestHeaderValue: "Req-V-200",
+				apiPath:            "/wrong",
 				respHeaderKey:      "Resp-K-200",
 				respHeaderValue:    "Resp-V-200",
 				schemaPath:         "./test_fixtures/valid_openapi_schema_wrong_path.yml",
 			},
-			wantApiData: &ApiData{
-				ApiKey:   "key",
-				Handlers: []HandlerInfo{{Path: "/wrong", ApiStats: ApiStats{NumCalls: 0, NumErrors: 0, NumUniqueCustomers: 0}}},
-			},
+			wantApiStats: &ApiStats{NumCalls: 0, NumErrors: 0, NumUniqueCustomers: 0},
+			// wantApiData: &ApiData{
+			// 	ApiKey:   "key",
+			// 	Handlers: []HandlerInfo{{Path: "/wrong", ApiStats: ApiStats{NumCalls: 0, NumErrors: 0, NumUniqueCustomers: 0}}},
+			// },
 		},
 		{
 			name: "invalid-schema",
@@ -147,13 +143,10 @@ func (s *TestSuite) Test_Middleware() {
 				status:             http.StatusOK,
 				requestHeaderKey:   "Req-K-200",
 				requestHeaderValue: "Req-V-200",
+				apiPath:            "/test",
 				respHeaderKey:      "Resp-K-200",
 				respHeaderValue:    "Resp-V-200",
 				schemaPath:         "./test_fixtures/invalid_openapi_schema.yml",
-			},
-			wantApiData: &ApiData{
-				ApiKey:   "key",
-				Handlers: []HandlerInfo(nil),
 			},
 			wantConfErr: errors.New("value of openapi must be a non-empty string"),
 		},
@@ -166,13 +159,14 @@ func (s *TestSuite) Test_Middleware() {
 		}
 		speakeasyCalled := false
 
-		s.speakeasyMockMux.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
+		s.speakeasyMockMux.HandleFunc("/rs/v1/metrics", func(w http.ResponseWriter, r *http.Request) {
 			var speakeasyApiData ApiData
 			decoder := json.NewDecoder(r.Body)
 			s.Require().NoError(decoder.Decode(&speakeasyApiData))
-			if tt.wantApiData != nil {
-				s.Require().Equal(tt.wantApiData.ApiKey, speakeasyApiData.ApiKey)
-				s.Require().Equal(tt.wantApiData.Handlers, speakeasyApiData.Handlers)
+			if tt.wantApiStats != nil {
+				s.Require().Equal(s.speakeasyApp.APIKey, speakeasyApiData.ApiKey)
+				apiId := s.speakeasyApp.ApiByPath[tt.args.apiPath].ID
+				s.Require().Equal(tt.wantApiStats, speakeasyApiData.Handlers.ApiStatsById[apiId])
 			}
 			speakeasyCalled = true
 		})
