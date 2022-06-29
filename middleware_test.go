@@ -4,13 +4,16 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/go-chi/chi"
+	"github.com/speakeasy-api/speakeasy-go-sdk/internal/models"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -66,18 +69,21 @@ func (s *TestSuite) Test_JsonFormat() {
 func (s *TestSuite) Test_Middleware() {
 	type args struct {
 		requestJson, responseJson, requestHeaderKey, requestHeaderValue, apiPath, respHeaderKey, respHeaderValue, schemaPath string
-		status                                                                                                               int
+		status, numRequests                                                                                                  int
 	}
 
 	tests := []struct {
 		name         string
 		args         args
 		wantApiStats *ApiStats
+		wantApi      *models.Api
+		wantSchema   *models.Schema
 		wantConfErr  error
 	}{
 		{
 			name: "happy-path",
 			args: args{
+				numRequests:        5,
 				requestJson:        `{"id":2}`,
 				responseJson:       `{"id":2, "name":"test"}`,
 				status:             http.StatusOK,
@@ -88,11 +94,14 @@ func (s *TestSuite) Test_Middleware() {
 				respHeaderValue:    "Resp-V-200",
 				schemaPath:         "./test_fixtures/valid_openapi_schema.yml",
 			},
-			wantApiStats: &ApiStats{NumCalls: 1, NumErrors: 0, NumUniqueCustomers: 0},
+			wantApiStats: &ApiStats{NumCalls: 5, NumErrors: 0, NumUniqueCustomers: 0},
+			wantSchema:   &models.Schema{VersionId: "1.0.0", Filename: "valid_openapi_schema.yml"},
+			wantApi:      &models.Api{Method: "GET", Path: "/test", DisplayName: "testRequestsv1", Description: "Test API Requests"},
 		},
 		{
 			name: "status-nok",
 			args: args{
+				numRequests:        5,
 				requestJson:        `{"id":3}`,
 				responseJson:       `{"id":2, "name":"test", "errors":true}`,
 				status:             http.StatusConflict,
@@ -103,7 +112,9 @@ func (s *TestSuite) Test_Middleware() {
 				respHeaderValue:    "Resp-V-409",
 				schemaPath:         "./test_fixtures/valid_openapi_schema.yml",
 			},
-			wantApiStats: &ApiStats{NumCalls: 1, NumErrors: 1, NumUniqueCustomers: 0},
+			wantApiStats: &ApiStats{NumCalls: 5, NumErrors: 5, NumUniqueCustomers: 0},
+			wantSchema:   &models.Schema{VersionId: "1.0.0", Filename: "valid_openapi_schema.yml"},
+			wantApi:      &models.Api{Method: "GET", Path: "/test", DisplayName: "testRequestsv1", Description: "Test API Requests"},
 		},
 		{
 			name: "req-not-json",
@@ -115,10 +126,13 @@ func (s *TestSuite) Test_Middleware() {
 				schemaPath:   "./test_fixtures/valid_openapi_schema.yml",
 			},
 			wantApiStats: &ApiStats{NumCalls: 0, NumErrors: 0, NumUniqueCustomers: 0},
+			wantSchema:   &models.Schema{VersionId: "1.0.0", Filename: "valid_openapi_schema.yml"},
+			wantApi:      &models.Api{Method: "GET", Path: "/test", DisplayName: "testRequestsv1", Description: "Test API Requests"},
 		},
 		{
 			name: "valid-schema-wrong-path",
 			args: args{
+				numRequests:        5,
 				requestJson:        `{"id":2}`,
 				responseJson:       `{"id":2, "name":"test"}`,
 				status:             http.StatusOK,
@@ -130,10 +144,8 @@ func (s *TestSuite) Test_Middleware() {
 				schemaPath:         "./test_fixtures/valid_openapi_schema_wrong_path.yml",
 			},
 			wantApiStats: &ApiStats{NumCalls: 0, NumErrors: 0, NumUniqueCustomers: 0},
-			// wantApiData: &ApiData{
-			// 	ApiKey:   "key",
-			// 	Handlers: []HandlerInfo{{Path: "/wrong", ApiStats: ApiStats{NumCalls: 0, NumErrors: 0, NumUniqueCustomers: 0}}},
-			// },
+			wantSchema:   &models.Schema{VersionId: "1.0.0", Filename: "valid_openapi_schema_wrong_path.yml"},
+			wantApi:      &models.Api{Method: "GET", Path: "/wrong", DisplayName: "testRequestsv1", Description: "Test API Requests"},
 		},
 		{
 			name: "invalid-schema",
@@ -149,6 +161,7 @@ func (s *TestSuite) Test_Middleware() {
 				schemaPath:         "./test_fixtures/invalid_openapi_schema.yml",
 			},
 			wantConfErr: errors.New("value of openapi must be a non-empty string"),
+			wantSchema:  &models.Schema{VersionId: "1.0.0", Filename: "invalid_openapi_schema.yml"},
 		},
 	}
 
@@ -160,15 +173,41 @@ func (s *TestSuite) Test_Middleware() {
 		speakeasyCalled := false
 
 		s.speakeasyMockMux.HandleFunc("/rs/v1/metrics", func(w http.ResponseWriter, r *http.Request) {
-			var speakeasyApiData ApiData
+			var apiData ApiData
 			decoder := json.NewDecoder(r.Body)
-			s.Require().NoError(decoder.Decode(&speakeasyApiData))
+			s.Require().NoError(decoder.Decode(&apiData))
 			if tt.wantApiStats != nil {
-				s.Require().Equal(s.speakeasyApp.APIKey, speakeasyApiData.ApiKey)
+				s.Require().Equal(s.speakeasyApp.APIKey, apiData.ApiKey)
 				apiId := s.speakeasyApp.ApiByPath[tt.args.apiPath].ID
-				s.Require().Equal(tt.wantApiStats, speakeasyApiData.Handlers.ApiStatsById[apiId])
+				s.Require().Equal(tt.wantApiStats, apiData.Handlers.ApiStatsById[apiId])
 			}
 			speakeasyCalled = true
+		})
+
+		registerCalled := false
+
+		s.speakeasyMockMux.HandleFunc("/rs/v1/apis/", func(w http.ResponseWriter, r *http.Request) {
+			var api models.Api
+			var schema models.Schema
+			var decoder *json.Decoder
+			if !strings.Contains(r.RequestURI, "schemas") {
+				decoder = json.NewDecoder(r.Body)
+				s.Require().NoError(decoder.Decode(&api))
+				fmt.Print("done")
+				if tt.wantApi != nil {
+					s.Require().True(testApiEqual(*tt.wantApi, api))
+				}
+			} else {
+				s.Require().NoError(r.ParseMultipartForm(32 << 20))
+				schemaJSON := r.FormValue("schema")
+				s.Require().NotEmpty(schemaJSON)
+				json.Unmarshal([]byte(schemaJSON), &schema)
+				s.Require().NotEmpty(schema)
+				if tt.wantSchema != nil {
+					s.Require().True(testSchemaEqual(*tt.wantSchema, schema))
+				}
+			}
+			registerCalled = true
 		})
 
 		s.router.With(s.speakeasyApp.Middleware).Get("/test", func(w http.ResponseWriter, r *http.Request) {
@@ -185,15 +224,20 @@ func (s *TestSuite) Test_Middleware() {
 		if len(tt.args.requestHeaderKey) > 0 {
 			requestHeaders[tt.args.requestHeaderKey] = tt.args.requestHeaderValue
 		}
-		resp, respBody := s.testRequest(http.MethodGet, "/test", tt.args.requestJson, requestHeaders)
-		s.Require().Equal(tt.args.responseJson, respBody, tt.name)
-		s.Require().Equal(tt.args.status, resp.StatusCode, tt.name)
-		s.Require().Equal(tt.args.respHeaderValue, resp.Header.Get(tt.args.respHeaderKey), tt.name)
+		var resp *http.Response
+		var respBody string
+		for i := 1; i <= tt.args.numRequests; i++ {
+			resp, respBody = s.testRequest(http.MethodGet, "/test", tt.args.requestJson, requestHeaders)
+			s.Require().Equal(tt.args.responseJson, respBody, tt.name)
+			s.Require().Equal(tt.args.status, resp.StatusCode, tt.name)
+			s.Require().Equal(tt.args.respHeaderValue, resp.Header.Get(tt.args.respHeaderKey), tt.name)
+		}
 
 		// wait on the async speakeasy call to finish
 		time.Sleep(3 * time.Second)
 
 		s.Require().Equal(true, speakeasyCalled, tt.name)
+		s.Require().Equal(true, registerCalled, tt.name)
 		s.TearDownSubTest()
 	}
 }
@@ -214,4 +258,12 @@ func (s *TestSuite) testRequest(method, path, body string, headers map[string]st
 	defer resp.Body.Close()
 
 	return resp, string(respBody)
+}
+
+func testApiEqual(a1, a2 models.Api) bool {
+	return a1.Method == a2.Method && a1.Path == a2.Path && a1.DisplayName == a2.DisplayName && a1.Description == a2.Description
+}
+
+func testSchemaEqual(s1, s2 models.Schema) bool {
+	return s1.VersionId == s2.VersionId && s1.Filename == s2.Filename
 }

@@ -66,12 +66,12 @@ func (app SpeakeasyApp) updateApiStatsByResponseStatus(path string, status int) 
 	defer app.Lock.Unlock()
 
 	apiId := app.ApiByPath[path].ID
-	stats := app.ApiStats[apiId]
+	stats := app.ApiStatsById[apiId]
 	stats.NumCalls += 1
 	if status < 200 || status >= 300 {
 		stats.NumErrors += 1
 	}
-	app.ApiStats[apiId] = stats
+	app.ApiStatsById[apiId] = stats
 }
 
 // If anything happens to go wrong inside one of speakasy-go-sdk internals, recover from panic and continue

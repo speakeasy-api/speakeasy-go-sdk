@@ -18,7 +18,7 @@ type ApiData struct {
 }
 
 type HandlerInfo struct {
-	ApiStatsById map[uint]ApiStats
+	ApiStatsById map[uint]*ApiStats
 }
 
 type ApiStats struct {

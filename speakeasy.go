@@ -41,14 +41,14 @@ const (
 // 	_, _ = client.Do(req)
 // }
 
-func (app SpeakeasyApp) sendApiStatsToSpeakeasy(ctx context.Context, apiStats map[uint]ApiStats, ticker *time.Ticker) {
+func (app SpeakeasyApp) sendApiStatsToSpeakeasy(ctx context.Context, apiStatsById map[uint]*ApiStats, ticker *time.Ticker) {
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case t := <-ticker.C:
 			ctx := log.WithFields(ctx, zap.Time("timestamp", t))
-			handlerInfo := HandlerInfo{ApiStatsById: apiStats}
+			handlerInfo := HandlerInfo{ApiStatsById: apiStatsById}
 
 			// Convert map state to ApiData
 			apiData := &ApiData{ApiKey: app.APIKey, ApiServerId: app.apiServerId.String(), Handlers: handlerInfo}
@@ -178,7 +178,7 @@ func (app SpeakeasyApp) registerSchema(schema models.Schema, mimeType string) {
 	}
 
 	// Set the content type from the writer, it includes necessary boundary as well
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", mw.FormDataContentType())
 	req.Header.Set("x-api-key", app.APIKey)
 
 	// Do the request

@@ -42,14 +42,14 @@ type SpeakeasyApp struct {
 	apiServerId    uuid.UUID
 	CancelApiStats context.CancelFunc
 	Lock           sync.RWMutex
-	ApiStats       map[uint]ApiStats
+	ApiStatsById   map[uint]*ApiStats
 	ApiByPath      map[string]models.Api
 	Schema         *openapi3.T
 }
 
 func Configure(config Configuration) (*SpeakeasyApp, error) {
 	defer dontPanic(context.Background())
-	app := &SpeakeasyApp{Lock: sync.RWMutex{}, ApiStats: make(map[uint]ApiStats), ApiByPath: make(map[string]models.Api), Schema: &openapi3.T{}}
+	app := &SpeakeasyApp{Lock: sync.RWMutex{}, ApiStatsById: make(map[uint]*ApiStats), ApiByPath: make(map[string]models.Api), Schema: &openapi3.T{}}
 	if config.ServerURL != "" {
 		app.ServerURL = config.ServerURL
 	} else {
@@ -81,7 +81,7 @@ func Configure(config Configuration) (*SpeakeasyApp, error) {
 
 	var cancelCtx context.Context
 	cancelCtx, app.CancelApiStats = context.WithCancel(context.Background())
-	go app.sendApiStatsToSpeakeasy(cancelCtx, app.ApiStats, ticker)
+	go app.sendApiStatsToSpeakeasy(cancelCtx, app.ApiStatsById, ticker)
 
 	return app, nil
 }
@@ -97,7 +97,7 @@ func (app SpeakeasyApp) registerApiAndSetStats(ctx context.Context, schemaFilePa
 		apiId := hash(app.WorkspaceId + method + path)
 		api := models.Api{ID: apiId, WorkspaceId: app.WorkspaceId, Method: method, Path: path, DisplayName: op.OperationID, Description: op.Summary}
 		go app.registerApi(api)
-		app.ApiStats[apiId] = ApiStats{NumCalls: 0, NumErrors: 0, NumUniqueCustomers: 0}
+		app.ApiStatsById[apiId] = &ApiStats{NumCalls: 0, NumErrors: 0, NumUniqueCustomers: 0}
 		app.ApiByPath[path] = api
 
 		// register schema
