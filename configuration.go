@@ -14,6 +14,7 @@ import (
 	"github.com/jinzhu/copier"
 	"github.com/speakeasy-api/speakeasy-go-sdk/internal/log"
 	"github.com/speakeasy-api/speakeasy-go-sdk/internal/models"
+	"github.com/speakeasy-api/speakeasy-schemas/pkg/metrics"
 	"go.uber.org/zap"
 )
 
@@ -42,14 +43,14 @@ type SpeakeasyApp struct {
 	apiServerId    uuid.UUID
 	CancelApiStats context.CancelFunc
 	Lock           sync.RWMutex
-	ApiStatsById   map[uint]*ApiStats
+	ApiStatsById   map[string]*metrics.ApiStats
 	ApiByPath      map[string]models.Api
 	Schema         *openapi3.T
 }
 
 func Configure(config Configuration) (*SpeakeasyApp, error) {
 	defer dontPanic(context.Background())
-	app := &SpeakeasyApp{Lock: sync.RWMutex{}, ApiStatsById: make(map[uint]*ApiStats), ApiByPath: make(map[string]models.Api), Schema: &openapi3.T{}}
+	app := &SpeakeasyApp{Lock: sync.RWMutex{}, ApiStatsById: make(map[string]*metrics.ApiStats), ApiByPath: make(map[string]models.Api), Schema: &openapi3.T{}}
 	if config.ServerURL != "" {
 		app.ServerURL = config.ServerURL
 	} else {
@@ -97,11 +98,11 @@ func (app SpeakeasyApp) registerApiAndSetStats(ctx context.Context, schemaFilePa
 		apiId := hash(app.WorkspaceId + method + path)
 		api := models.Api{ID: apiId, WorkspaceId: app.WorkspaceId, Method: method, Path: path, DisplayName: op.OperationID, Description: op.Summary}
 		go app.registerApi(api)
-		app.ApiStatsById[apiId] = &ApiStats{NumCalls: 0, NumErrors: 0, NumUniqueCustomers: 0}
+		apiIdStr := strconv.FormatUint(uint64(apiId), 10)
+		app.ApiStatsById[apiIdStr] = &metrics.ApiStats{NumCalls: 0, NumErrors: 0}
 		app.ApiByPath[path] = api
 
 		// register schema
-		apiIdStr := strconv.FormatUint(uint64(apiId), 10)
 		schema := models.Schema{ID: hash(apiIdStr), ApiId: apiIdStr, VersionId: app.Schema.Info.Version, Filename: urlPath.Base(schemaFilePath), Description: app.Schema.Info.Description}
 		mimeType := "application/json"
 		go app.registerSchema(schema, mimeType)

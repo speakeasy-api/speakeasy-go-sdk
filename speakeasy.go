@@ -14,6 +14,7 @@ import (
 
 	"github.com/speakeasy-api/speakeasy-go-sdk/internal/log"
 	"github.com/speakeasy-api/speakeasy-go-sdk/internal/models"
+	"github.com/speakeasy-api/speakeasy-schemas/pkg/metrics"
 	"go.uber.org/zap"
 )
 
@@ -41,17 +42,16 @@ const (
 // 	_, _ = client.Do(req)
 // }
 
-func (app SpeakeasyApp) sendApiStatsToSpeakeasy(ctx context.Context, apiStatsById map[uint]*ApiStats, ticker *time.Ticker) {
+func (app SpeakeasyApp) sendApiStatsToSpeakeasy(ctx context.Context, apiStatsById map[string]*metrics.ApiStats, ticker *time.Ticker) {
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case t := <-ticker.C:
 			ctx := log.WithFields(ctx, zap.Time("timestamp", t))
-			handlerInfo := HandlerInfo{ApiStatsById: apiStatsById}
 
 			// Convert map state to ApiData
-			apiData := &ApiData{ApiKey: app.APIKey, ApiServerId: app.apiServerId.String(), Handlers: handlerInfo}
+			apiData := &metrics.ApiData{ApiKey: app.APIKey, ApiServerID: app.apiServerId.String(), ApiStatsByID: apiStatsById}
 			bytesRepresentation, err := json.Marshal(apiData)
 			if err != nil {
 				log.From(ctx).Error("failed to encode ApiData", zap.Error(err))

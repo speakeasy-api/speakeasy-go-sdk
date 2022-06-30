@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/getkin/kin-openapi/routers"
@@ -65,7 +66,7 @@ func (app SpeakeasyApp) updateApiStatsByResponseStatus(path string, status int) 
 	app.Lock.Lock()
 	defer app.Lock.Unlock()
 
-	apiId := app.ApiByPath[path].ID
+	apiId := strconv.FormatUint(uint64(app.ApiByPath[path].ID), 10)
 	stats := app.ApiStatsById[apiId]
 	stats.NumCalls += 1
 	if status < 200 || status >= 300 {

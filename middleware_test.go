@@ -8,12 +8,14 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/go-chi/chi"
 	"github.com/speakeasy-api/speakeasy-go-sdk/internal/models"
+	"github.com/speakeasy-api/speakeasy-schemas/pkg/metrics"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -75,7 +77,7 @@ func (s *TestSuite) Test_Middleware() {
 	tests := []struct {
 		name         string
 		args         args
-		wantApiStats *ApiStats
+		wantApiStats *metrics.ApiStats
 		wantApi      *models.Api
 		wantSchema   *models.Schema
 		wantConfErr  error
@@ -94,7 +96,7 @@ func (s *TestSuite) Test_Middleware() {
 				respHeaderValue:    "Resp-V-200",
 				schemaPath:         "./test_fixtures/valid_openapi_schema.yml",
 			},
-			wantApiStats: &ApiStats{NumCalls: 5, NumErrors: 0, NumUniqueCustomers: 0},
+			wantApiStats: &metrics.ApiStats{NumCalls: 5, NumErrors: 0},
 			wantSchema:   &models.Schema{VersionId: "1.0.0", Filename: "valid_openapi_schema.yml"},
 			wantApi:      &models.Api{Method: "GET", Path: "/test", DisplayName: "testRequestsv1", Description: "Test API Requests"},
 		},
@@ -112,7 +114,7 @@ func (s *TestSuite) Test_Middleware() {
 				respHeaderValue:    "Resp-V-409",
 				schemaPath:         "./test_fixtures/valid_openapi_schema.yml",
 			},
-			wantApiStats: &ApiStats{NumCalls: 5, NumErrors: 5, NumUniqueCustomers: 0},
+			wantApiStats: &metrics.ApiStats{NumCalls: 5, NumErrors: 5},
 			wantSchema:   &models.Schema{VersionId: "1.0.0", Filename: "valid_openapi_schema.yml"},
 			wantApi:      &models.Api{Method: "GET", Path: "/test", DisplayName: "testRequestsv1", Description: "Test API Requests"},
 		},
@@ -125,7 +127,7 @@ func (s *TestSuite) Test_Middleware() {
 				status:       http.StatusOK,
 				schemaPath:   "./test_fixtures/valid_openapi_schema.yml",
 			},
-			wantApiStats: &ApiStats{NumCalls: 0, NumErrors: 0, NumUniqueCustomers: 0},
+			wantApiStats: &metrics.ApiStats{NumCalls: 0, NumErrors: 0},
 			wantSchema:   &models.Schema{VersionId: "1.0.0", Filename: "valid_openapi_schema.yml"},
 			wantApi:      &models.Api{Method: "GET", Path: "/test", DisplayName: "testRequestsv1", Description: "Test API Requests"},
 		},
@@ -143,7 +145,7 @@ func (s *TestSuite) Test_Middleware() {
 				respHeaderValue:    "Resp-V-200",
 				schemaPath:         "./test_fixtures/valid_openapi_schema_wrong_path.yml",
 			},
-			wantApiStats: &ApiStats{NumCalls: 0, NumErrors: 0, NumUniqueCustomers: 0},
+			wantApiStats: &metrics.ApiStats{NumCalls: 0, NumErrors: 0},
 			wantSchema:   &models.Schema{VersionId: "1.0.0", Filename: "valid_openapi_schema_wrong_path.yml"},
 			wantApi:      &models.Api{Method: "GET", Path: "/wrong", DisplayName: "testRequestsv1", Description: "Test API Requests"},
 		},
@@ -173,13 +175,13 @@ func (s *TestSuite) Test_Middleware() {
 		speakeasyCalled := false
 
 		s.speakeasyMockMux.HandleFunc("/rs/v1/metrics", func(w http.ResponseWriter, r *http.Request) {
-			var apiData ApiData
+			var apiData metrics.ApiData
 			decoder := json.NewDecoder(r.Body)
 			s.Require().NoError(decoder.Decode(&apiData))
 			if tt.wantApiStats != nil {
 				s.Require().Equal(s.speakeasyApp.APIKey, apiData.ApiKey)
 				apiId := s.speakeasyApp.ApiByPath[tt.args.apiPath].ID
-				s.Require().Equal(tt.wantApiStats, apiData.Handlers.ApiStatsById[apiId])
+				s.Require().Equal(tt.wantApiStats, apiData.ApiStatsByID[strconv.FormatUint(uint64(apiId), 10)])
 			}
 			speakeasyCalled = true
 		})
