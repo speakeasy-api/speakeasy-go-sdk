@@ -15,7 +15,7 @@ require (
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.4 // indirect
 	github.com/mailru/easyjson v0.0.0-20190626092158-b2ccc519800e // indirect
-	github.com/speakeasy-api/speakeasy-schemas v0.0.0-20220629094746-07ab4fd649ae // indirect
+	github.com/speakeasy-api/speakeasy-schemas v0.0.0-20220630204841-52908f36f6c5 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

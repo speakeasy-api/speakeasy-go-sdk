@@ -2,7 +2,6 @@ package speakeasy
 
 import (
 	"context"
-	"hash/fnv"
 	"net/http"
 	urlPath "path"
 	"strconv"
@@ -13,8 +12,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/jinzhu/copier"
 	"github.com/speakeasy-api/speakeasy-go-sdk/internal/log"
-	"github.com/speakeasy-api/speakeasy-go-sdk/internal/models"
+	"github.com/speakeasy-api/speakeasy-go-sdk/internal/utils"
+	"github.com/speakeasy-api/speakeasy-schemas/pkg/apis"
 	"github.com/speakeasy-api/speakeasy-schemas/pkg/metrics"
+	"github.com/speakeasy-api/speakeasy-schemas/pkg/schemas"
 	"go.uber.org/zap"
 )
 
@@ -26,7 +27,7 @@ const defaultApiStatsIntervalSeconds = 300
 // Configuration sets up and customizes communication with the Speakeasy Registry API
 type Configuration struct {
 	APIKey                  string
-	WorkspaceId             string
+	WorkspaceID             string
 	ServerURL               string
 	SchemaFilePath          string
 	ApiStatsIntervalSeconds int
@@ -44,13 +45,13 @@ type SpeakeasyApp struct {
 	CancelApiStats context.CancelFunc
 	Lock           sync.RWMutex
 	ApiStatsById   map[string]*metrics.ApiStats
-	ApiByPath      map[string]models.Api
+	ApiByPath      map[string]apis.Api
 	Schema         *openapi3.T
 }
 
 func Configure(config Configuration) (*SpeakeasyApp, error) {
 	defer dontPanic(context.Background())
-	app := &SpeakeasyApp{Lock: sync.RWMutex{}, ApiStatsById: make(map[string]*metrics.ApiStats), ApiByPath: make(map[string]models.Api), Schema: &openapi3.T{}}
+	app := &SpeakeasyApp{Lock: sync.RWMutex{}, ApiStatsById: make(map[string]*metrics.ApiStats), ApiByPath: make(map[string]apis.Api), Schema: &openapi3.T{}}
 	if config.ServerURL != "" {
 		app.ServerURL = config.ServerURL
 	} else {
@@ -62,7 +63,7 @@ func Configure(config Configuration) (*SpeakeasyApp, error) {
 		app.ApiStatsIntervalSeconds = defaultApiStatsIntervalSeconds
 	}
 	app.APIKey = config.APIKey
-	app.WorkspaceId = config.WorkspaceId
+	app.WorkspaceID = config.WorkspaceID
 	app.SchemaFilePath = config.SchemaFilePath
 
 	app.apiServerId = uuid.New()
@@ -95,17 +96,18 @@ func (app SpeakeasyApp) registerApiAndSetStats(ctx context.Context, schemaFilePa
 	for path, pathItem := range app.Schema.Paths {
 		// register api
 		method, op := methodAndOpFromPathItem(ctx, path, pathItem)
-		apiId := hash(app.WorkspaceId + method + path)
-		api := models.Api{ID: apiId, WorkspaceId: app.WorkspaceId, Method: method, Path: path, DisplayName: op.OperationID, Description: op.Summary}
-		go app.registerApi(api)
-		apiIdStr := strconv.FormatUint(uint64(apiId), 10)
-		app.ApiStatsById[apiIdStr] = &metrics.ApiStats{NumCalls: 0, NumErrors: 0}
+		api := apis.Api{WorkspaceID: app.WorkspaceID, Method: method, Path: path, DisplayName: op.OperationID, Description: op.Summary}
+		unhashedApiID := app.WorkspaceID + method + path
+		apiID := strconv.FormatUint(uint64(utils.Hash(unhashedApiID)), 10)
+		go app.registerApi(api, apiID)
+		app.ApiStatsById[apiID] = &metrics.ApiStats{NumCalls: 0, NumErrors: 0}
 		app.ApiByPath[path] = api
 
 		// register schema
-		schema := models.Schema{ID: hash(apiIdStr), ApiId: apiIdStr, VersionId: app.Schema.Info.Version, Filename: urlPath.Base(schemaFilePath), Description: app.Schema.Info.Description}
+		schema := schemas.Schema{ApiID: apiID, VersionID: app.Schema.Info.Version, Filename: urlPath.Base(schemaFilePath), Description: app.Schema.Info.Description}
+		schemaID := strconv.FormatUint(uint64(utils.Hash(apiID)), 10)
 		mimeType := "application/json"
-		go app.registerSchema(schema, mimeType)
+		go app.registerSchema(schema, schemaID, mimeType)
 	}
 	return nil
 }
@@ -150,10 +152,4 @@ func (app SpeakeasyApp) loadOpenApiSchema(ctx context.Context, schemaFilePath st
 	}
 	copier.Copy(app.Schema, schema)
 	return nil
-}
-
-func hash(s string) uint {
-	h := fnv.New32a()
-	h.Write([]byte(s))
-	return uint(h.Sum32())
 }

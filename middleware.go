@@ -11,6 +11,7 @@ import (
 	"github.com/getkin/kin-openapi/routers"
 	"github.com/getkin/kin-openapi/routers/gorillamux"
 	"github.com/speakeasy-api/speakeasy-go-sdk/internal/log"
+	"github.com/speakeasy-api/speakeasy-go-sdk/internal/utils"
 	"go.uber.org/zap"
 )
 
@@ -66,13 +67,14 @@ func (app SpeakeasyApp) updateApiStatsByResponseStatus(path string, status int) 
 	app.Lock.Lock()
 	defer app.Lock.Unlock()
 
-	apiId := strconv.FormatUint(uint64(app.ApiByPath[path].ID), 10)
-	stats := app.ApiStatsById[apiId]
+	unhashedApiID := app.WorkspaceID + app.ApiByPath[path].Method + app.ApiByPath[path].Path
+	apiID := strconv.FormatUint(uint64(utils.Hash(unhashedApiID)), 10)
+	stats := app.ApiStatsById[apiID]
 	stats.NumCalls += 1
 	if status < 200 || status >= 300 {
 		stats.NumErrors += 1
 	}
-	app.ApiStatsById[apiId] = stats
+	app.ApiStatsById[apiID] = stats
 }
 
 // If anything happens to go wrong inside one of speakasy-go-sdk internals, recover from panic and continue

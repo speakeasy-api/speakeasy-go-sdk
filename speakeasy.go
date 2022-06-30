@@ -9,12 +9,12 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/speakeasy-api/speakeasy-go-sdk/internal/log"
-	"github.com/speakeasy-api/speakeasy-go-sdk/internal/models"
+	"github.com/speakeasy-api/speakeasy-schemas/pkg/apis"
 	"github.com/speakeasy-api/speakeasy-schemas/pkg/metrics"
+	"github.com/speakeasy-api/speakeasy-schemas/pkg/schemas"
 	"go.uber.org/zap"
 )
 
@@ -51,7 +51,7 @@ func (app SpeakeasyApp) sendApiStatsToSpeakeasy(ctx context.Context, apiStatsByI
 			ctx := log.WithFields(ctx, zap.Time("timestamp", t))
 
 			// Convert map state to ApiData
-			apiData := &metrics.ApiData{ApiKey: app.APIKey, ApiServerID: app.apiServerId.String(), ApiStatsByID: apiStatsById}
+			apiData := &metrics.ApiData{ApiServerID: app.apiServerId.String(), ApiStatsByID: apiStatsById}
 			bytesRepresentation, err := json.Marshal(apiData)
 			if err != nil {
 				log.From(ctx).Error("failed to encode ApiData", zap.Error(err))
@@ -78,7 +78,7 @@ func (app SpeakeasyApp) sendApiStatsToSpeakeasy(ctx context.Context, apiStatsByI
 	}
 }
 
-func (app SpeakeasyApp) registerApi(api models.Api) {
+func (app SpeakeasyApp) registerApi(api apis.Api, apiID string) {
 	ctx := log.WithFields(context.Background(), zap.Any("api", api))
 
 	bytesRepresentation, err := json.Marshal(api)
@@ -86,8 +86,7 @@ func (app SpeakeasyApp) registerApi(api models.Api) {
 		log.From(ctx).Error("failed to encode Api", zap.Error(err))
 		return
 	}
-	apiId := strconv.FormatUint(uint64(api.ID), 10)
-	apiEndpoint := app.ServerURL + fmt.Sprintf("/rs/v1/apis/%s", apiId)
+	apiEndpoint := app.ServerURL + fmt.Sprintf("/rs/v1/apis/%s", apiID)
 	req, err := http.NewRequest(http.MethodPost, apiEndpoint, bytes.NewBuffer(bytesRepresentation))
 	if err != nil {
 		log.From(ctx).Error("failed to create http request for Speakeasy api endpoint", zap.String("req_path", apiEndpoint), zap.Error(err))
@@ -107,7 +106,7 @@ func (app SpeakeasyApp) registerApi(api models.Api) {
 	}
 }
 
-func (app SpeakeasyApp) registerSchema(schema models.Schema, mimeType string) {
+func (app SpeakeasyApp) registerSchema(schema schemas.Schema, schemaID, mimeType string) {
 	ctx := log.WithFields(context.Background(), zap.Any("schema", schema))
 
 	bytesRepresentation, err := json.Marshal(schema)
@@ -115,8 +114,7 @@ func (app SpeakeasyApp) registerSchema(schema models.Schema, mimeType string) {
 		log.From(ctx).Error("failed to encode Schema", zap.Error(err))
 		return
 	}
-	schemaId := strconv.FormatUint(uint64(schema.ID), 10)
-	schemaEndpoint := app.ServerURL + fmt.Sprintf("/rs/v1/apis/%s/versions/%s/schemas/%s", schema.ApiId, schema.VersionId, schemaId)
+	schemaEndpoint := app.ServerURL + fmt.Sprintf("/rs/v1/apis/%s/versions/%s/schemas/%s", schema.ApiID, schema.VersionID, schemaID)
 	// TODO: add mimetype and stuff here
 	buf := bytes.NewBuffer([]byte{})
 	mw := multipart.NewWriter(buf)

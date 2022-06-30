@@ -14,8 +14,10 @@ import (
 	"time"
 
 	"github.com/go-chi/chi"
-	"github.com/speakeasy-api/speakeasy-go-sdk/internal/models"
+	"github.com/speakeasy-api/speakeasy-go-sdk/internal/utils"
+	"github.com/speakeasy-api/speakeasy-schemas/pkg/apis"
 	"github.com/speakeasy-api/speakeasy-schemas/pkg/metrics"
+	"github.com/speakeasy-api/speakeasy-schemas/pkg/schemas"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -78,8 +80,8 @@ func (s *TestSuite) Test_Middleware() {
 		name         string
 		args         args
 		wantApiStats *metrics.ApiStats
-		wantApi      *models.Api
-		wantSchema   *models.Schema
+		wantApi      *apis.Api
+		wantSchema   *schemas.Schema
 		wantConfErr  error
 	}{
 		{
@@ -97,8 +99,8 @@ func (s *TestSuite) Test_Middleware() {
 				schemaPath:         "./test_fixtures/valid_openapi_schema.yml",
 			},
 			wantApiStats: &metrics.ApiStats{NumCalls: 5, NumErrors: 0},
-			wantSchema:   &models.Schema{VersionId: "1.0.0", Filename: "valid_openapi_schema.yml"},
-			wantApi:      &models.Api{Method: "GET", Path: "/test", DisplayName: "testRequestsv1", Description: "Test API Requests"},
+			wantSchema:   &schemas.Schema{VersionID: "1.0.0", Filename: "valid_openapi_schema.yml"},
+			wantApi:      &apis.Api{Method: "GET", Path: "/test", DisplayName: "testRequestsv1", Description: "Test API Requests"},
 		},
 		{
 			name: "status-nok",
@@ -115,8 +117,8 @@ func (s *TestSuite) Test_Middleware() {
 				schemaPath:         "./test_fixtures/valid_openapi_schema.yml",
 			},
 			wantApiStats: &metrics.ApiStats{NumCalls: 5, NumErrors: 5},
-			wantSchema:   &models.Schema{VersionId: "1.0.0", Filename: "valid_openapi_schema.yml"},
-			wantApi:      &models.Api{Method: "GET", Path: "/test", DisplayName: "testRequestsv1", Description: "Test API Requests"},
+			wantSchema:   &schemas.Schema{VersionID: "1.0.0", Filename: "valid_openapi_schema.yml"},
+			wantApi:      &apis.Api{Method: "GET", Path: "/test", DisplayName: "testRequestsv1", Description: "Test API Requests"},
 		},
 		{
 			name: "req-not-json",
@@ -128,8 +130,8 @@ func (s *TestSuite) Test_Middleware() {
 				schemaPath:   "./test_fixtures/valid_openapi_schema.yml",
 			},
 			wantApiStats: &metrics.ApiStats{NumCalls: 0, NumErrors: 0},
-			wantSchema:   &models.Schema{VersionId: "1.0.0", Filename: "valid_openapi_schema.yml"},
-			wantApi:      &models.Api{Method: "GET", Path: "/test", DisplayName: "testRequestsv1", Description: "Test API Requests"},
+			wantSchema:   &schemas.Schema{VersionID: "1.0.0", Filename: "valid_openapi_schema.yml"},
+			wantApi:      &apis.Api{Method: "GET", Path: "/test", DisplayName: "testRequestsv1", Description: "Test API Requests"},
 		},
 		{
 			name: "valid-schema-wrong-path",
@@ -146,8 +148,8 @@ func (s *TestSuite) Test_Middleware() {
 				schemaPath:         "./test_fixtures/valid_openapi_schema_wrong_path.yml",
 			},
 			wantApiStats: &metrics.ApiStats{NumCalls: 0, NumErrors: 0},
-			wantSchema:   &models.Schema{VersionId: "1.0.0", Filename: "valid_openapi_schema_wrong_path.yml"},
-			wantApi:      &models.Api{Method: "GET", Path: "/wrong", DisplayName: "testRequestsv1", Description: "Test API Requests"},
+			wantSchema:   &schemas.Schema{VersionID: "1.0.0", Filename: "valid_openapi_schema_wrong_path.yml"},
+			wantApi:      &apis.Api{Method: "GET", Path: "/wrong", DisplayName: "testRequestsv1", Description: "Test API Requests"},
 		},
 		{
 			name: "invalid-schema",
@@ -163,7 +165,7 @@ func (s *TestSuite) Test_Middleware() {
 				schemaPath:         "./test_fixtures/invalid_openapi_schema.yml",
 			},
 			wantConfErr: errors.New("value of openapi must be a non-empty string"),
-			wantSchema:  &models.Schema{VersionId: "1.0.0", Filename: "invalid_openapi_schema.yml"},
+			wantSchema:  &schemas.Schema{VersionID: "1.0.0", Filename: "invalid_openapi_schema.yml"},
 		},
 	}
 
@@ -179,9 +181,9 @@ func (s *TestSuite) Test_Middleware() {
 			decoder := json.NewDecoder(r.Body)
 			s.Require().NoError(decoder.Decode(&apiData))
 			if tt.wantApiStats != nil {
-				s.Require().Equal(s.speakeasyApp.APIKey, apiData.ApiKey)
-				apiId := s.speakeasyApp.ApiByPath[tt.args.apiPath].ID
-				s.Require().Equal(tt.wantApiStats, apiData.ApiStatsByID[strconv.FormatUint(uint64(apiId), 10)])
+				unhashedApiID := s.speakeasyApp.WorkspaceID + s.speakeasyApp.ApiByPath[tt.args.apiPath].Method + s.speakeasyApp.ApiByPath[tt.args.apiPath].Path
+				apiID := strconv.FormatUint(uint64(utils.Hash(unhashedApiID)), 10)
+				s.Require().Equal(tt.wantApiStats, apiData.ApiStatsByID[apiID])
 			}
 			speakeasyCalled = true
 		})
@@ -189,8 +191,8 @@ func (s *TestSuite) Test_Middleware() {
 		registerCalled := false
 
 		s.speakeasyMockMux.HandleFunc("/rs/v1/apis/", func(w http.ResponseWriter, r *http.Request) {
-			var api models.Api
-			var schema models.Schema
+			var api apis.Api
+			var schema schemas.Schema
 			var decoder *json.Decoder
 			if !strings.Contains(r.RequestURI, "schemas") {
 				decoder = json.NewDecoder(r.Body)
@@ -262,10 +264,10 @@ func (s *TestSuite) testRequest(method, path, body string, headers map[string]st
 	return resp, string(respBody)
 }
 
-func testApiEqual(a1, a2 models.Api) bool {
+func testApiEqual(a1, a2 apis.Api) bool {
 	return a1.Method == a2.Method && a1.Path == a2.Path && a1.DisplayName == a2.DisplayName && a1.Description == a2.Description
 }
 
-func testSchemaEqual(s1, s2 models.Schema) bool {
-	return s1.VersionId == s2.VersionId && s1.Filename == s2.Filename
+func testSchemaEqual(s1, s2 schemas.Schema) bool {
+	return s1.VersionID == s2.VersionID && s1.Filename == s2.Filename
 }
