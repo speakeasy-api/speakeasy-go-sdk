@@ -96,10 +96,10 @@ func (app SpeakeasyApp) registerApiAndSetStats(ctx context.Context, schemaFilePa
 	for path, pathItem := range app.Schema.Paths {
 		// register api
 		method, op := methodAndOpFromPathItem(ctx, path, pathItem)
-		api := apis.Api{WorkspaceID: app.WorkspaceID, Method: method, Path: path, DisplayName: op.OperationID, Description: op.Summary}
 		unhashedApiID := app.WorkspaceID + method + path
 		apiID := strconv.FormatUint(uint64(utils.Hash(unhashedApiID)), 10)
-		go app.registerApi(api, apiID)
+		api := apis.Api{WorkspaceID: app.WorkspaceID, Method: method, Path: path, DisplayName: op.OperationID, Description: op.Summary, ApiID: apiID}
+		go app.registerApi(api)
 		app.ApiStatsById[apiID] = &metrics.ApiStats{NumCalls: 0, NumErrors: 0}
 		app.ApiByPath[path] = api
 

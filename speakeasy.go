@@ -78,7 +78,7 @@ func (app SpeakeasyApp) sendApiStatsToSpeakeasy(ctx context.Context, apiStatsByI
 	}
 }
 
-func (app SpeakeasyApp) registerApi(api apis.Api, apiID string) {
+func (app SpeakeasyApp) registerApi(api apis.Api) {
 	ctx := log.WithFields(context.Background(), zap.Any("api", api))
 
 	bytesRepresentation, err := json.Marshal(api)
@@ -86,7 +86,7 @@ func (app SpeakeasyApp) registerApi(api apis.Api, apiID string) {
 		log.From(ctx).Error("failed to encode Api", zap.Error(err))
 		return
 	}
-	apiEndpoint := app.ServerURL + fmt.Sprintf("/rs/v1/apis/%s", apiID)
+	apiEndpoint := app.ServerURL + fmt.Sprintf("/rs/v1/apis/%s", api.ApiID)
 	req, err := http.NewRequest(http.MethodPost, apiEndpoint, bytes.NewBuffer(bytesRepresentation))
 	if err != nil {
 		log.From(ctx).Error("failed to create http request for Speakeasy api endpoint", zap.String("req_path", apiEndpoint), zap.Error(err))

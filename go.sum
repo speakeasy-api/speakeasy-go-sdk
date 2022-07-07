@@ -101,6 +101,8 @@ github.com/speakeasy-api/speakeasy-schemas v0.0.0-20220629094746-07ab4fd649ae h1
 github.com/speakeasy-api/speakeasy-schemas v0.0.0-20220629094746-07ab4fd649ae/go.mod h1:g0yz/bfH6EDcBmACdbqM7BQtTzUrBfhJoIgDb6AsKRQ=
 github.com/speakeasy-api/speakeasy-schemas v0.0.0-20220630204841-52908f36f6c5 h1:gwwXbJZZP3oju0Kb/qHBmP7T88WQKeX+lyAOVu0SujM=
 github.com/speakeasy-api/speakeasy-schemas v0.0.0-20220630204841-52908f36f6c5/go.mod h1:g0yz/bfH6EDcBmACdbqM7BQtTzUrBfhJoIgDb6AsKRQ=
+github.com/speakeasy-api/speakeasy-schemas v0.0.0-20220706203759-a102a61fdb5f h1:hQPmgv7I9AHT9kXF9BIVSAmY+Rz2NsmrFBRvf+fpt/4=
+github.com/speakeasy-api/speakeasy-schemas v0.0.0-20220706203759-a102a61fdb5f/go.mod h1:g0yz/bfH6EDcBmACdbqM7BQtTzUrBfhJoIgDb6AsKRQ=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.1.1/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.4.0/go.mod h1:YvHI0jy2hoMjB+UWwv71VJQ9isScKT/TqJzVSSt89Yw=
