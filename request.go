@@ -55,13 +55,16 @@ func getRequestInfo(r *http.Request, startTime time.Time) (RequestInfo, error) {
 			return ri, err
 		}
 
-		// mask all the JSON fields listed in Config.KeysToMask
-		sanitizedJsonString, err := getMaskedJSON(body)
-		if err != nil {
-			return ri, err
+		sanitizedJSONString := map[string]interface{}{}
+		if len(body) > 0 {
+			// mask all the JSON fields listed in Config.KeysToMask
+			sanitizedJSONString, err = getMaskedJSON(body)
+			if err != nil {
+				return ri, err
+			}
 		}
 
-		ri.Body = sanitizedJsonString
+		ri.Body = sanitizedJSONString
 	}
 	return ri, nil
 }
