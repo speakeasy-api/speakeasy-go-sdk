@@ -70,7 +70,7 @@ func (s *speakeasy) captureRequestResponse(swr *speakeasyResponseWriter, resBuf 
 		},
 		Browser: &har.Creator{
 			Name:    sdkName,
-			Version: speakasyVersion,
+			Version: speakeasyVersion,
 		},
 		Comment: "request capture for " + r.URL.String(),
 		Entries: []*har.Entry{

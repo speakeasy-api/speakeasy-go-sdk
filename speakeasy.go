@@ -15,8 +15,8 @@ const (
 )
 
 var (
-	speakasyVersion = "0.0.1"
-	serverURL       = "https://api.speakeasyapi.dev"
+	speakeasyVersion = "0.0.1"
+	serverURL        = "https://api.speakeasyapi.dev"
 
 	defaultInstance *speakeasy
 )
