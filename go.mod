@@ -8,13 +8,15 @@ require (
 )
 
 require (
+	github.com/chromedp/cdproto v0.0.0-20220629234738-4cfc9cdeeb92 // indirect
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
 	github.com/go-openapi/swag v0.19.5 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/invopop/yaml v0.1.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.4 // indirect
-	github.com/mailru/easyjson v0.0.0-20190626092158-b2ccc519800e // indirect
+	github.com/josharian/intern v1.0.0 // indirect
+	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/speakeasy-api/speakeasy-schemas v0.0.0-20220706203759-a102a61fdb5f // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect

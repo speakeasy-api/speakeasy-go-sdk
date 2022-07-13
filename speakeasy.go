@@ -1,189 +1,74 @@
 package speakeasy
 
 import (
-	"bytes"
-	"context"
-	"encoding/json"
-	"fmt"
-	"io"
-	"mime/multipart"
+	"errors"
 	"net/http"
+	"net/url"
 	"os"
-	"time"
-
-	"github.com/speakeasy-api/speakeasy-go-sdk/internal/log"
-	"github.com/speakeasy-api/speakeasy-schemas/pkg/apis"
-	"github.com/speakeasy-api/speakeasy-schemas/pkg/metrics"
-	"github.com/speakeasy-api/speakeasy-schemas/pkg/schemas"
-	"go.uber.org/zap"
 )
 
 const (
-	timeoutDuration = 2 * time.Second
+	sdkName     = "speakeasy-go-sdk"
+	companyName = "Speakeasy"
+
+	ingestAPI = "/rs/v1/ingest"
 )
 
-// Disable sending request/response info for every call to Speakeasy for now
-// func sendToSpeakeasy(speakeasyInfo MetaData) {
-// 	bytesRepresentation, err := json.Marshal(speakeasyInfo)
-// 	if err != nil {
-// 		return
-// 	}
+var (
+	speakasyVersion = "0.0.1"
+	serverURL       = "https://api.speakeasyapi.dev"
 
-// 	req, err := http.NewRequest(http.MethodPost, Config.ServerURL, bytes.NewBuffer(bytesRepresentation))
-// 	if err != nil {
-// 		return
-// 	}
-// 	// Set the content type from the writer, it includes necessary boundary as well
-// 	req.Header.Set("Content-Type", "application/json")
-// 	req.Header.Set("x-api-key", Config.APIKey)
+	defaultInstance *speakeasy
+)
 
-// 	// Do the request
-// 	client := &http.Client{Timeout: timeoutDuration}
-// 	_, _ = client.Do(req)
-// }
-
-func (app SpeakeasyApp) sendApiStatsToSpeakeasy(ctx context.Context, apiStatsById map[string]*metrics.ApiStats, ticker *time.Ticker) {
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case t := <-ticker.C:
-			ctx := log.WithFields(ctx, zap.Time("timestamp", t))
-
-			// Convert map state to ApiData
-			apiData := &metrics.ApiData{ApiServerID: app.apiServerId.String(), ApiStatsByID: apiStatsById}
-			bytesRepresentation, err := json.Marshal(apiData)
-			if err != nil {
-				log.From(ctx).Error("failed to encode ApiData", zap.Error(err))
-				return
-			}
-			metricsEndpoint := app.ServerURL + "/rs/v1/metrics"
-			req, err := http.NewRequest(http.MethodPost, metricsEndpoint, bytes.NewBuffer(bytesRepresentation))
-			if err != nil {
-				log.From(ctx).Error("failed to create http request for Speakeasy metrics endpoint", zap.String("req_path", metricsEndpoint), zap.Error(err))
-				return
-			}
-			// Set the content type from the writer, it includes necessary boundary as well
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("x-api-key", app.APIKey)
-
-			// Do the request
-			client := &http.Client{Timeout: timeoutDuration}
-			startTime := time.Now()
-			_, err = client.Do(req)
-			if err != nil {
-				log.From(ctx).Error("failed to get valid response for http request", zap.Time("start_time", startTime), zap.String("method", req.Method), zap.String("request_uri", req.RequestURI), zap.Duration("request_duration", time.Since(startTime)))
-			}
-		}
-	}
+// Config provides configuration for the Speakeasy SDK.
+type Config struct {
+	APIKey     string
+	HTTPClient *http.Client
 }
 
-func (app SpeakeasyApp) registerApi(api apis.Api) {
-	ctx := log.WithFields(context.Background(), zap.Any("api", api))
-
-	bytesRepresentation, err := json.Marshal(api)
-	if err != nil {
-		log.From(ctx).Error("failed to encode Api", zap.Error(err))
-		return
-	}
-	apiEndpoint := app.ServerURL + fmt.Sprintf("/rs/v1/apis/%s", api.ApiID)
-	req, err := http.NewRequest(http.MethodPost, apiEndpoint, bytes.NewBuffer(bytesRepresentation))
-	if err != nil {
-		log.From(ctx).Error("failed to create http request for Speakeasy api endpoint", zap.String("req_path", apiEndpoint), zap.Error(err))
-		return
-	}
-
-	// Set the content type from the writer, it includes necessary boundary as well
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("x-api-key", app.APIKey)
-
-	// Do the request
-	client := &http.Client{Timeout: timeoutDuration}
-	startTime := time.Now()
-	_, err = client.Do(req)
-	if err != nil {
-		log.From(ctx).Error("failed to get valid response for http request", zap.Time("start_time", startTime), zap.String("method", req.Method), zap.String("request_uri", req.RequestURI), zap.Duration("request_duration", time.Since(startTime)))
-	}
+type speakeasy struct {
+	config    Config
+	serverURL *url.URL
 }
 
-func (app SpeakeasyApp) registerSchema(schema schemas.Schema, schemaID, mimeType string) {
-	ctx := log.WithFields(context.Background(), zap.Any("schema", schema))
+// Configure allows you to configure the default instance of the Speakeasy SDK.
+// Use this if you will use the same API Key for all connected APIs.
+func Configure(config Config) {
+	defaultInstance = New(config)
+}
 
-	bytesRepresentation, err := json.Marshal(schema)
-	if err != nil {
-		log.From(ctx).Error("failed to encode Schema", zap.Error(err))
-		return
-	}
-	schemaEndpoint := app.ServerURL + fmt.Sprintf("/rs/v1/apis/%s/versions/%s/schemas/%s", schema.ApiID, schema.VersionID, schemaID)
-	// TODO: add mimetype and stuff here
-	buf := bytes.NewBuffer([]byte{})
-	mw := multipart.NewWriter(buf)
+// New creates a new instance of the Speakeasy SDK.
+// This allows you to create multiple instances of the SDK
+// for specifying different API Keys for different APIs.
+func New(config Config) *speakeasy {
+	s := &speakeasy{}
+	s.configure(config)
 
-	sw, err := mw.CreateFormField("schema")
-	if err != nil {
-		log.From(ctx).Error("failed to create schema writer", zap.Error(err))
-		return
-	}
-	_, err = sw.Write(bytesRepresentation)
-	if err != nil {
-		log.From(ctx).Error("failed to write schema in to request body", zap.Error(err))
-		return
+	return s
+}
+
+func (s *speakeasy) configure(config Config) {
+	if config.APIKey == "" {
+		panic(errors.New("API key is required")) // TODO determine if we want to panic or return error
 	}
 
-	mtw, err := mw.CreateFormField("mime_type")
-	if err != nil {
-		log.From(ctx).Error("failed to create mime_type writer", zap.Error(err))
-		return
-	}
-	_, err = mtw.Write([]byte(mimeType))
-	if err != nil {
-		log.From(ctx).Error("failed to write mime_type in to request body", zap.Error(err))
-		return
+	if config.HTTPClient == nil {
+		config.HTTPClient = http.DefaultClient
 	}
 
-	file, err := os.Open(app.SchemaFilePath)
-	if err != nil {
-		log.From(ctx).Error("failed to open schema filepath", zap.Error(err), zap.String("schema_filepath", app.SchemaFilePath))
-		return
-	}
-	fw, err := mw.CreateFormFile("file", schema.Filename)
-	if err != nil {
-		log.From(ctx).Error("failed to create filewriter", zap.Error(err))
-		return
-	}
-	_, err = io.Copy(fw, file)
-	if err != nil {
-		log.From(ctx).Error("failed to copy schema file contents to writer", zap.Error(err), zap.String("schema_filepath", app.SchemaFilePath))
-		return
+	configuredServerURL := serverURL
+
+	envServerURL := os.Getenv("SPEAKEASY_SERVER_URL")
+	if envServerURL != "" {
+		configuredServerURL = envServerURL
 	}
 
-	err = mw.Close()
+	u, err := url.ParseRequestURI(configuredServerURL)
 	if err != nil {
-		log.From(ctx).Error("failed to close multipart writer", zap.Error(err))
-		return
+		panic(err)
 	}
+	s.serverURL = u
 
-	err = file.Close()
-	if err != nil {
-		log.From(ctx).Error("failed to close schema file", zap.Error(err), zap.String("schema_filepath", app.SchemaFilePath))
-		return
-	}
-
-	req, err := http.NewRequest(http.MethodPost, schemaEndpoint, buf)
-	if err != nil {
-		log.From(ctx).Error("failed to create http request for Speakeasy schema endpoint", zap.String("req_path", schemaEndpoint), zap.Error(err))
-		return
-	}
-
-	// Set the content type from the writer, it includes necessary boundary as well
-	req.Header.Set("Content-Type", mw.FormDataContentType())
-	req.Header.Set("x-api-key", app.APIKey)
-
-	// Do the request
-	client := &http.Client{Timeout: timeoutDuration}
-	startTime := time.Now()
-	_, err = client.Do(req)
-	if err != nil {
-		log.From(ctx).Error("failed to get valid response for http request", zap.Time("start_time", startTime), zap.String("method", req.Method), zap.String("request_uri", req.RequestURI), zap.Duration("request_duration", time.Since(startTime)))
-	}
+	s.config = config
 }

@@ -1,273 +1,198 @@
-package speakeasy
+package speakeasy_test
 
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
-	"strings"
+	"os"
+	"sync"
 	"testing"
 	"time"
 
-	"github.com/go-chi/chi"
-	"github.com/speakeasy-api/speakeasy-go-sdk/internal/utils"
-	"github.com/speakeasy-api/speakeasy-schemas/pkg/apis"
-	"github.com/speakeasy-api/speakeasy-schemas/pkg/metrics"
-	"github.com/speakeasy-api/speakeasy-schemas/pkg/schemas"
-	"github.com/stretchr/testify/suite"
+	"github.com/speakeasy-api/speakeasy-go-sdk"
+	"github.com/stretchr/testify/assert"
 )
 
-type TestSuite struct {
-	suite.Suite
-
-	testServer *httptest.Server
-	router     *chi.Mux
-
-	speakeasyMockMux    *http.ServeMux
-	speakeasyMockServer *httptest.Server
-
-	speakeasyApp *SpeakeasyApp
-}
-
-func Test(t *testing.T) {
-	suite.Run(t, new(TestSuite))
-}
-
-func (s *TestSuite) SetupSubTest(wantConfErr error, schemaPath string) error {
-	s.router = chi.NewRouter()
-	s.testServer = httptest.NewServer(s.router)
-	s.speakeasyMockMux = http.NewServeMux()
-	s.speakeasyMockServer = httptest.NewServer(s.speakeasyMockMux)
-	var err error
-	s.speakeasyApp, err = Configure(Configuration{ServerURL: s.speakeasyMockServer.URL, APIKey: "key", SchemaFilePath: schemaPath, ApiStatsIntervalSeconds: 1})
-	if wantConfErr != nil {
-		s.Require().ErrorContains(err, wantConfErr.Error())
-		return err
-	} else {
-		s.Require().NoError(err)
-	}
-	return nil
-}
-
-func (s *TestSuite) TearDownSubTest() {
-	s.testServer.Close()
-	s.speakeasyMockServer.Close()
-	s.speakeasyApp.CancelApiStats()
-	// wait on the goroutine sending speakeasy stats to terminate
-	time.Sleep(1 * time.Second)
-}
-
-func (s *TestSuite) Test_JsonFormat() {
-	content, err := ioutil.ReadFile("sample.json")
-	s.Require().NoError(err)
-	var speakeasyMetadata MetaData
-	err = json.Unmarshal(content, &speakeasyMetadata)
-	s.Require().NoError(err)
-
-}
-
-func (s *TestSuite) Test_Middleware() {
+func TestMiddleware_Success(t *testing.T) {
 	type args struct {
-		requestJson, responseJson, requestHeaderKey, requestHeaderValue, apiPath, respHeaderKey, respHeaderValue, schemaPath string
-		status, numRequests                                                                                                  int
+		method          string
+		url             string
+		headers         map[string][]string
+		body            []byte
+		responseStatus  int
+		responseBody    []byte
+		responseHeaders map[string][]string
 	}
-
 	tests := []struct {
-		name         string
-		args         args
-		wantApiStats *metrics.ApiStats
-		wantApi      *apis.Api
-		wantSchema   *schemas.Schema
-		wantConfErr  error
+		name    string
+		args    args
+		wantHAR string
 	}{
 		{
-			name: "happy-path",
+			name: "captures basic request and response",
 			args: args{
-				numRequests:        5,
-				requestJson:        `{"id":2}`,
-				responseJson:       `{"id":2, "name":"test"}`,
-				status:             http.StatusOK,
-				requestHeaderKey:   "Req-K-200",
-				requestHeaderValue: "Req-V-200",
-				apiPath:            "/test",
-				respHeaderKey:      "Resp-K-200",
-				respHeaderValue:    "Resp-V-200",
-				schemaPath:         "./test_fixtures/valid_openapi_schema.yml",
+				method:         http.MethodGet,
+				url:            "http://test.com/test",
+				responseStatus: http.StatusOK,
+				responseBody:   []byte("test"),
 			},
-			wantApiStats: &metrics.ApiStats{NumCalls: 5, NumErrors: 0},
-			wantSchema:   &schemas.Schema{VersionID: "1.0.0", Filename: "valid_openapi_schema.yml"},
-			wantApi:      &apis.Api{Method: "GET", Path: "/test", DisplayName: "testRequestsv1", Description: "Test API Requests"},
+			wantHAR: `{"log":{"version":"1.2","creator":{"name":"Speakeasy","version":"Startup"},"browser":{"name":"speakeasy-go-sdk","version":"0.0.1"},"entries":[{"startedDateTime":"2020-01-01T00:00:00Z","time":1,"request":{"method":"GET","url":"http://test.com/test","httpVersion":"HTTP/1.1","cookies":[],"headers":[],"queryString":[],"postData":{"mimeType":"application/octet-stream","params":null,"text":""},"headersSize":-1,"bodySize":0},"response":{"status":200,"statusText":"OK","httpVersion":"HTTP/1.1","cookies":[],"headers":[],"content":{"size":4,"mimeType":"application/octet-stream","text":"test"},"redirectURL":"","headersSize":-1,"bodySize":4},"cache":null,"timings":null,"serverIPAddress":"test.com"}],"comment":"request capture for http://test.com/test"}}`,
 		},
 		{
-			name: "status-nok",
+			name: "captures basic request and response with no response header set",
 			args: args{
-				numRequests:        5,
-				requestJson:        `{"id":3}`,
-				responseJson:       `{"id":2, "name":"test", "errors":true}`,
-				status:             http.StatusConflict,
-				requestHeaderKey:   "Req-K-409",
-				requestHeaderValue: "Req-V-409",
-				apiPath:            "/test",
-				respHeaderKey:      "Resp-K-409",
-				respHeaderValue:    "Resp-V-409",
-				schemaPath:         "./test_fixtures/valid_openapi_schema.yml",
+				method:         http.MethodGet,
+				url:            "http://test.com/test",
+				responseStatus: -1,
+				responseBody:   []byte("test"),
 			},
-			wantApiStats: &metrics.ApiStats{NumCalls: 5, NumErrors: 5},
-			wantSchema:   &schemas.Schema{VersionID: "1.0.0", Filename: "valid_openapi_schema.yml"},
-			wantApi:      &apis.Api{Method: "GET", Path: "/test", DisplayName: "testRequestsv1", Description: "Test API Requests"},
+			wantHAR: `{"log":{"version":"1.2","creator":{"name":"Speakeasy","version":"Startup"},"browser":{"name":"speakeasy-go-sdk","version":"0.0.1"},"entries":[{"startedDateTime":"2020-01-01T00:00:00Z","time":1,"request":{"method":"GET","url":"http://test.com/test","httpVersion":"HTTP/1.1","cookies":[],"headers":[],"queryString":[],"postData":{"mimeType":"application/octet-stream","params":null,"text":""},"headersSize":-1,"bodySize":0},"response":{"status":200,"statusText":"OK","httpVersion":"HTTP/1.1","cookies":[],"headers":[{"name":"Content-Type","value":"text/plain; charset=utf-8"}],"content":{"size":4,"mimeType":"text/plain; charset=utf-8","text":"test"},"redirectURL":"","headersSize":-1,"bodySize":4},"cache":null,"timings":null,"serverIPAddress":"test.com"}],"comment":"request capture for http://test.com/test"}}`,
 		},
 		{
-			name: "req-not-json",
+			name: "captures basic request and response with different content types",
 			args: args{
-				requestJson:  `{"id4`,
-				apiPath:      "/test",
-				responseJson: `{}`,
-				status:       http.StatusOK,
-				schemaPath:   "./test_fixtures/valid_openapi_schema.yml",
+				method:          http.MethodGet,
+				url:             "http://test.com/test",
+				headers:         map[string][]string{"Content-Type": {"application/json"}},
+				responseStatus:  -1,
+				responseBody:    []byte("test"),
+				responseHeaders: map[string][]string{"Content-Type": {"text/plain; charset=utf-8"}},
 			},
-			wantApiStats: &metrics.ApiStats{NumCalls: 0, NumErrors: 0},
-			wantSchema:   &schemas.Schema{VersionID: "1.0.0", Filename: "valid_openapi_schema.yml"},
-			wantApi:      &apis.Api{Method: "GET", Path: "/test", DisplayName: "testRequestsv1", Description: "Test API Requests"},
+			wantHAR: `{"log":{"version":"1.2","creator":{"name":"Speakeasy","version":"Startup"},"browser":{"name":"speakeasy-go-sdk","version":"0.0.1"},"entries":[{"startedDateTime":"2020-01-01T00:00:00Z","time":1,"request":{"method":"GET","url":"http://test.com/test","httpVersion":"HTTP/1.1","cookies":[],"headers":[{"name":"Content-Type","value":"application/json"}],"queryString":[],"postData":{"mimeType":"application/json","params":null,"text":""},"headersSize":-1,"bodySize":0},"response":{"status":200,"statusText":"OK","httpVersion":"HTTP/1.1","cookies":[],"headers":[{"name":"Content-Type","value":"text/plain; charset=utf-8"}],"content":{"size":4,"mimeType":"text/plain; charset=utf-8","text":"test"},"redirectURL":"","headersSize":-1,"bodySize":4},"cache":null,"timings":null,"serverIPAddress":"test.com"}],"comment":"request capture for http://test.com/test"}}`,
 		},
 		{
-			name: "valid-schema-wrong-path",
+			name: "captures post request with body",
 			args: args{
-				numRequests:        5,
-				requestJson:        `{"id":2}`,
-				responseJson:       `{"id":2, "name":"test"}`,
-				status:             http.StatusOK,
-				requestHeaderKey:   "Req-K-200",
-				requestHeaderValue: "Req-V-200",
-				apiPath:            "/wrong",
-				respHeaderKey:      "Resp-K-200",
-				respHeaderValue:    "Resp-V-200",
-				schemaPath:         "./test_fixtures/valid_openapi_schema_wrong_path.yml",
+				method:          http.MethodPost,
+				url:             "http://test.com/test",
+				headers:         map[string][]string{"Content-Type": {"application/json"}},
+				body:            []byte(`{test: "test"}`),
+				responseStatus:  -1,
+				responseBody:    []byte("test"),
+				responseHeaders: map[string][]string{"Content-Type": {"text/plain; charset=utf-8"}},
 			},
-			wantApiStats: &metrics.ApiStats{NumCalls: 0, NumErrors: 0},
-			wantSchema:   &schemas.Schema{VersionID: "1.0.0", Filename: "valid_openapi_schema_wrong_path.yml"},
-			wantApi:      &apis.Api{Method: "GET", Path: "/wrong", DisplayName: "testRequestsv1", Description: "Test API Requests"},
+			wantHAR: `{"log":{"version":"1.2","creator":{"name":"Speakeasy","version":"Startup"},"browser":{"name":"speakeasy-go-sdk","version":"0.0.1"},"entries":[{"startedDateTime":"2020-01-01T00:00:00Z","time":1,"request":{"method":"POST","url":"http://test.com/test","httpVersion":"HTTP/1.1","cookies":[],"headers":[{"name":"Content-Type","value":"application/json"}],"queryString":[],"postData":{"mimeType":"application/json","params":null,"text":"{test: \"test\"}"},"headersSize":-1,"bodySize":14},"response":{"status":200,"statusText":"OK","httpVersion":"HTTP/1.1","cookies":[],"headers":[{"name":"Content-Type","value":"text/plain; charset=utf-8"}],"content":{"size":4,"mimeType":"text/plain; charset=utf-8","text":"test"},"redirectURL":"","headersSize":-1,"bodySize":4},"cache":null,"timings":null,"serverIPAddress":"test.com"}],"comment":"request capture for http://test.com/test"}}`,
 		},
 		{
-			name: "invalid-schema",
+			name: "captures query params",
 			args: args{
-				requestJson:        `{"id":2}`,
-				responseJson:       `{"id":2, "name":"test"}`,
-				status:             http.StatusOK,
-				requestHeaderKey:   "Req-K-200",
-				requestHeaderValue: "Req-V-200",
-				apiPath:            "/test",
-				respHeaderKey:      "Resp-K-200",
-				respHeaderValue:    "Resp-V-200",
-				schemaPath:         "./test_fixtures/invalid_openapi_schema.yml",
+				method:         http.MethodGet,
+				url:            "http://test.com/test?param1=value1&param2=value2",
+				responseStatus: http.StatusOK,
+				responseBody:   []byte("test"),
 			},
-			wantConfErr: errors.New("value of openapi must be a non-empty string"),
-			wantSchema:  &schemas.Schema{VersionID: "1.0.0", Filename: "invalid_openapi_schema.yml"},
+			wantHAR: `{"log":{"version":"1.2","creator":{"name":"Speakeasy","version":"Startup"},"browser":{"name":"speakeasy-go-sdk","version":"0.0.1"},"entries":[{"startedDateTime":"2020-01-01T00:00:00Z","time":1,"request":{"method":"GET","url":"http://test.com/test?param1=value1\u0026param2=value2","httpVersion":"HTTP/1.1","cookies":[],"headers":[],"queryString":[{"name":"param1","value":"value1"},{"name":"param2","value":"value2"}],"postData":{"mimeType":"application/octet-stream","params":null,"text":""},"headersSize":-1,"bodySize":0},"response":{"status":200,"statusText":"OK","httpVersion":"HTTP/1.1","cookies":[],"headers":[],"content":{"size":4,"mimeType":"application/octet-stream","text":"test"},"redirectURL":"","headersSize":-1,"bodySize":4},"cache":null,"timings":null,"serverIPAddress":"test.com"}],"comment":"request capture for http://test.com/test?param1=value1\u0026param2=value2"}}`,
+		},
+		{
+			name: "captures cookies",
+			args: args{
+				method:          http.MethodGet,
+				url:             "http://test.com/test",
+				headers:         map[string][]string{"Cookie": {"cookie1=value1; cookie2=value2"}},
+				responseStatus:  http.StatusOK,
+				responseBody:    []byte("test"),
+				responseHeaders: map[string][]string{"Set-Cookie": {"cookie1=value1; cookie2=value2"}},
+			},
+			wantHAR: `{"log":{"version":"1.2","creator":{"name":"Speakeasy","version":"Startup"},"browser":{"name":"speakeasy-go-sdk","version":"0.0.1"},"entries":[{"startedDateTime":"2020-01-01T00:00:00Z","time":1,"request":{"method":"GET","url":"http://test.com/test","httpVersion":"HTTP/1.1","cookies":[{"name":"cookie1","value":"value1","expires":"0001-01-01T00:00:00Z"},{"name":"cookie2","value":"value2","expires":"0001-01-01T00:00:00Z"}],"headers":[],"queryString":[],"postData":{"mimeType":"application/octet-stream","params":null,"text":""},"headersSize":-1,"bodySize":0},"response":{"status":200,"statusText":"OK","httpVersion":"HTTP/1.1","cookies":[{"name":"cookie1","value":"value1","expires":"0001-01-01T00:00:00Z"},{"name":"cookie2","value":"value2","expires":"0001-01-01T00:00:00Z"}],"headers":[],"content":{"size":4,"mimeType":"application/octet-stream","text":"test"},"redirectURL":"","headersSize":-1,"bodySize":4},"cache":null,"timings":null,"serverIPAddress":"test.com"}],"comment":"request capture for http://test.com/test"}}`,
+		},
+		{
+			name: "captures redirect",
+			args: args{
+				method:          http.MethodGet,
+				url:             "http://test.com/test",
+				responseStatus:  http.StatusOK,
+				responseBody:    []byte("test"),
+				responseHeaders: map[string][]string{"Location": {"http://test.com/test2"}},
+			},
+			wantHAR: `{"log":{"version":"1.2","creator":{"name":"Speakeasy","version":"Startup"},"browser":{"name":"speakeasy-go-sdk","version":"0.0.1"},"entries":[{"startedDateTime":"2020-01-01T00:00:00Z","time":1,"request":{"method":"GET","url":"http://test.com/test","httpVersion":"HTTP/1.1","cookies":[],"headers":[],"queryString":[],"postData":{"mimeType":"application/octet-stream","params":null,"text":""},"headersSize":-1,"bodySize":0},"response":{"status":200,"statusText":"OK","httpVersion":"HTTP/1.1","cookies":[],"headers":[{"name":"Location","value":"http://test.com/test2"}],"content":{"size":4,"mimeType":"application/octet-stream","text":"test"},"redirectURL":"http://test.com/test2","headersSize":-1,"bodySize":4},"cache":null,"timings":null,"serverIPAddress":"test.com"}],"comment":"request capture for http://test.com/test"}}`,
+		},
+		{
+			name: "captures body size zero when cached",
+			args: args{
+				method:         http.MethodGet,
+				url:            "http://test.com/test",
+				responseStatus: http.StatusNotModified,
+				responseBody:   []byte("test"),
+			},
+			wantHAR: `{"log":{"version":"1.2","creator":{"name":"Speakeasy","version":"Startup"},"browser":{"name":"speakeasy-go-sdk","version":"0.0.1"},"entries":[{"startedDateTime":"2020-01-01T00:00:00Z","time":1,"request":{"method":"GET","url":"http://test.com/test","httpVersion":"HTTP/1.1","cookies":[],"headers":[],"queryString":[],"postData":{"mimeType":"application/octet-stream","params":null,"text":""},"headersSize":-1,"bodySize":0},"response":{"status":304,"statusText":"Not Modified","httpVersion":"HTTP/1.1","cookies":[],"headers":[],"content":{"size":4,"mimeType":"application/octet-stream","text":"test"},"redirectURL":"","headersSize":-1,"bodySize":0},"cache":null,"timings":null,"serverIPAddress":"test.com"}],"comment":"request capture for http://test.com/test"}}`,
 		},
 	}
-
 	for _, tt := range tests {
-		err := s.SetupSubTest(tt.wantConfErr, tt.args.schemaPath)
-		if err != nil {
-			return
-		}
-		speakeasyCalled := false
+		t.Run(tt.name, func(t *testing.T) {
+			captured := false
+			handled := false
 
-		s.speakeasyMockMux.HandleFunc("/rs/v1/metrics", func(w http.ResponseWriter, r *http.Request) {
-			var apiData metrics.ApiData
-			decoder := json.NewDecoder(r.Body)
-			s.Require().NoError(decoder.Decode(&apiData))
-			if tt.wantApiStats != nil {
-				unhashedApiID := s.speakeasyApp.WorkspaceID + s.speakeasyApp.ApiByPath[tt.args.apiPath].Method + s.speakeasyApp.ApiByPath[tt.args.apiPath].Path
-				apiID := strconv.FormatUint(uint64(utils.Hash(unhashedApiID)), 10)
-				s.Require().Equal(tt.wantApiStats, apiData.ApiStatsByID[apiID])
-			}
-			speakeasyCalled = true
-		})
+			speakeasy.ExportSetTimeNow(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC))
+			speakeasy.ExportSetTimeSince(1 * time.Second)
 
-		registerCalled := false
+			wg := &sync.WaitGroup{}
+			wg.Add(1)
 
-		s.speakeasyMockMux.HandleFunc("/rs/v1/apis/", func(w http.ResponseWriter, r *http.Request) {
-			var api apis.Api
-			var schema schemas.Schema
-			var decoder *json.Decoder
-			if !strings.Contains(r.RequestURI, "schemas") {
-				decoder = json.NewDecoder(r.Body)
-				s.Require().NoError(decoder.Decode(&api))
-				fmt.Print("done")
-				if tt.wantApi != nil {
-					s.Require().True(testApiEqual(*tt.wantApi, api))
+			server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+				data, err := ioutil.ReadAll(req.Body)
+				assert.NoError(t, err)
+
+				capture := struct {
+					HAR json.RawMessage `json:"har"`
+				}{}
+
+				err = json.Unmarshal(data, &capture)
+				assert.NoError(t, err)
+
+				assert.Equal(t, tt.wantHAR, string(capture.HAR))
+
+				rw.WriteHeader(http.StatusOK)
+
+				captured = true
+				wg.Done()
+			}))
+			defer server.Close()
+
+			os.Setenv("SPEAKEASY_SERVER_URL", server.URL)
+
+			speakeasy.Configure(speakeasy.Config{APIKey: "test", HTTPClient: server.Client()})
+
+			h := speakeasy.Middleware(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				for k, v := range tt.args.responseHeaders {
+					for _, vv := range v {
+						w.Header().Add(k, vv)
+					}
 				}
-			} else {
-				s.Require().NoError(r.ParseMultipartForm(32 << 20))
-				schemaJSON := r.FormValue("schema")
-				s.Require().NotEmpty(schemaJSON)
-				json.Unmarshal([]byte(schemaJSON), &schema)
-				s.Require().NotEmpty(schema)
-				if tt.wantSchema != nil {
-					s.Require().True(testSchemaEqual(*tt.wantSchema, schema))
+
+				data, err := ioutil.ReadAll(req.Body)
+				assert.NoError(t, err)
+				assert.Equal(t, string(tt.args.body), string(data))
+
+				if tt.args.responseStatus >= 0 {
+					w.WriteHeader(tt.args.responseStatus)
+				}
+				_, err = w.Write(tt.args.responseBody)
+				assert.NoError(t, err)
+				handled = true
+			}))
+
+			w := httptest.NewRecorder()
+
+			buf := bytes.NewBuffer(tt.args.body)
+
+			req, err := http.NewRequest(tt.args.method, tt.args.url, buf)
+			assert.NoError(t, err)
+
+			for k, v := range tt.args.headers {
+				for _, vv := range v {
+					req.Header.Add(k, vv)
 				}
 			}
-			registerCalled = true
+
+			h.ServeHTTP(w, req)
+
+			wg.Wait()
+
+			assert.True(t, handled, "middleware did not call handler")
+			assert.True(t, captured, "middleware did not capture request")
+			assert.Equal(t, http.StatusOK, w.Code)
 		})
-
-		s.router.With(s.speakeasyApp.Middleware).Get("/test", func(w http.ResponseWriter, r *http.Request) {
-			s.Require().Equal(tt.args.requestHeaderValue, r.Header.Get(tt.args.requestHeaderKey))
-			w.Header()[tt.args.respHeaderKey] = []string{tt.args.respHeaderValue}
-			w.WriteHeader(tt.args.status)
-			_, err := w.Write([]byte(tt.args.responseJson))
-			if err != nil {
-				return
-			}
-		})
-
-		requestHeaders := map[string]string{}
-		if len(tt.args.requestHeaderKey) > 0 {
-			requestHeaders[tt.args.requestHeaderKey] = tt.args.requestHeaderValue
-		}
-		var resp *http.Response
-		var respBody string
-		for i := 1; i <= tt.args.numRequests; i++ {
-			resp, respBody = s.testRequest(http.MethodGet, "/test", tt.args.requestJson, requestHeaders)
-			s.Require().Equal(tt.args.responseJson, respBody, tt.name)
-			s.Require().Equal(tt.args.status, resp.StatusCode, tt.name)
-			s.Require().Equal(tt.args.respHeaderValue, resp.Header.Get(tt.args.respHeaderKey), tt.name)
-		}
-
-		// wait on the async speakeasy call to finish
-		time.Sleep(3 * time.Second)
-
-		s.Require().Equal(true, speakeasyCalled, tt.name)
-		s.Require().Equal(true, registerCalled, tt.name)
-		s.TearDownSubTest()
 	}
-}
-
-func (s *TestSuite) testRequest(method, path, body string, headers map[string]string) (*http.Response, string) {
-	req, err := http.NewRequest(method, s.testServer.URL+path, bytes.NewBuffer([]byte(body)))
-	s.Require().NoError(err)
-
-	for k, v := range headers {
-		req.Header.Add(k, v)
-	}
-
-	resp, err := http.DefaultClient.Do(req)
-	s.Require().NoError(err)
-
-	respBody, err := ioutil.ReadAll(resp.Body)
-	s.Require().NoError(err)
-	defer resp.Body.Close()
-
-	return resp, string(respBody)
-}
-
-func testApiEqual(a1, a2 apis.Api) bool {
-	return a1.Method == a2.Method && a1.Path == a2.Path && a1.DisplayName == a2.DisplayName && a1.Description == a2.Description
-}
-
-func testSchemaEqual(s1, s2 schemas.Schema) bool {
-	return s1.VersionID == s2.VersionID && s1.Filename == s2.Filename
 }
