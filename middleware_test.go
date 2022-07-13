@@ -121,6 +121,8 @@ func TestMiddleware_Success(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			os.Unsetenv("SPEAKEASY_SERVER_URL")
+
 			captured := false
 			handled := false
 
@@ -152,9 +154,9 @@ func TestMiddleware_Success(t *testing.T) {
 
 			os.Setenv("SPEAKEASY_SERVER_URL", server.URL)
 
-			speakeasy.Configure(speakeasy.Config{APIKey: "test", HTTPClient: server.Client()})
+			sdkInstance := speakeasy.New(speakeasy.Config{APIKey: "test", HTTPClient: server.Client()})
 
-			h := speakeasy.Middleware(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			h := sdkInstance.Middleware(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 				for k, v := range tt.args.responseHeaders {
 					for _, vv := range v {
 						w.Header().Add(k, vv)

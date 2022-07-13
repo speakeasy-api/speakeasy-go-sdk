@@ -64,23 +64,20 @@ func TestConfigure_Success(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			speakeasy.ExportResetSpeakeasyDefaultInstance()
+			os.Unsetenv("SPEAKEASY_SERVER_URL")
 
 			if tt.fields.envServerURL != "" {
 				os.Setenv("SPEAKEASY_SERVER_URL", tt.fields.envServerURL)
 			}
 
-			speakeasy.Configure(tt.args.config)
+			sdkInstance := speakeasy.New(tt.args.config)
+			assert.NotNil(t, sdkInstance)
 
-			defaultInstance := speakeasy.ExportGetSpeakeasyDefaultInstance()
-
-			assert.NotNil(t, defaultInstance)
-
-			config := defaultInstance.ExportGetSpeakeasyConfig()
+			config := sdkInstance.ExportGetSpeakeasyConfig()
 
 			assert.Equal(t, tt.args.config.APIKey, config.APIKey)
 			assert.Equal(t, tt.wantHTTPClient, config.HTTPClient)
-			assert.Equal(t, tt.wantServerURL, defaultInstance.ExportGetSpeakeasyServerURL())
+			assert.Equal(t, tt.wantServerURL, sdkInstance.ExportGetSpeakeasyServerURL())
 		})
 	}
 }
@@ -125,7 +122,7 @@ func TestConfigure_Error(t *testing.T) {
 					os.Setenv("SPEAKEASY_SERVER_URL", tt.fields.envServerURL)
 				}
 
-				speakeasy.Configure(tt.args.config)
+				speakeasy.New(tt.args.config)
 			})
 		})
 	}
