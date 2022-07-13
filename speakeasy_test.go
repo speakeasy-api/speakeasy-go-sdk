@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/speakeasy-api/speakeasy-go-sdk"
 	"github.com/stretchr/testify/assert"
@@ -58,8 +59,10 @@ func TestConfigure_Success(t *testing.T) {
 					APIKey: "12345",
 				},
 			},
-			wantServerURL:  "https://testapi.speakeasyapi.dev",
-			wantHTTPClient: &http.Client{},
+			wantServerURL: "https://testapi.speakeasyapi.dev",
+			wantHTTPClient: &http.Client{
+				Timeout: 30 * time.Second,
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -68,6 +71,10 @@ func TestConfigure_Success(t *testing.T) {
 
 			if tt.fields.envServerURL != "" {
 				os.Setenv("SPEAKEASY_SERVER_URL", tt.fields.envServerURL)
+			}
+
+			if tt.wantHTTPClient != http.DefaultClient {
+				tt.args.config.HTTPClient = tt.wantHTTPClient
 			}
 
 			sdkInstance := speakeasy.New(tt.args.config)
