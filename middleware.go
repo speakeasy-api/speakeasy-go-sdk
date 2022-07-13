@@ -55,7 +55,7 @@ func (s *speakeasy) captureRequestResponse(swr *speakeasyResponseWriter, resBuf 
 	}
 
 	if resBuf.Len() == 0 {
-		// Read the body just in case it was not read in the hander
+		// Read the body just in case it was not read in the handler
 		if _, err := io.Copy(ioutil.Discard, r.Body); err != nil {
 			log.From(r.Context()).Error("speakeasy-sdk: failed to read request body", zap.Error(err))
 		}
@@ -65,10 +65,6 @@ func (s *speakeasy) captureRequestResponse(swr *speakeasyResponseWriter, resBuf 
 	h.Log = &har.Log{
 		Version: "1.2",
 		Creator: &har.Creator{
-			Name:    companyName,
-			Version: "Startup",
-		},
-		Browser: &har.Creator{
 			Name:    sdkName,
 			Version: speakeasyVersion,
 		},
