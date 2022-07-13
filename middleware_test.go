@@ -192,7 +192,13 @@ func TestMiddleware_Success(t *testing.T) {
 
 			assert.True(t, handled, "middleware did not call handler")
 			assert.True(t, captured, "middleware did not capture request")
-			assert.Equal(t, http.StatusOK, w.Code)
+
+			responseStatus := http.StatusOK
+			if tt.args.responseStatus > 0 {
+				responseStatus = tt.args.responseStatus
+			}
+
+			assert.Equal(t, responseStatus, w.Code)
 		})
 	}
 }
