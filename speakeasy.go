@@ -3,7 +3,6 @@ package speakeasy
 import (
 	"errors"
 	"net/http"
-	"net/url"
 	"os"
 )
 
@@ -31,7 +30,7 @@ type Config struct {
 
 type speakeasy struct {
 	config    Config
-	serverURL *url.URL
+	serverURL string
 }
 
 // Configure allows you to configure the default instance of the Speakeasy SDK.
@@ -66,11 +65,7 @@ func (s *speakeasy) configure(config Config) {
 		configuredServerURL = envServerURL
 	}
 
-	u, err := url.ParseRequestURI(configuredServerURL)
-	if err != nil {
-		panic(err)
-	}
-	s.serverURL = u
+	s.serverURL = configuredServerURL
 
 	s.config = config
 }

@@ -2,16 +2,19 @@ package speakeasy
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"io/ioutil"
 	"net/http"
-	"path"
 	"time"
 
 	"github.com/chromedp/cdproto/har"
 	"github.com/speakeasy-api/speakeasy-go-sdk/internal/log"
+	"github.com/speakeasy-api/speakeasy-schemas/grpc/go/registry/ingest"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 var timeNow = func() time.Time {
@@ -51,6 +54,8 @@ func (s *speakeasy) Middleware(next http.Handler) http.Handler {
 }
 
 func (s *speakeasy) captureRequestResponse(swr *speakeasyResponseWriter, resBuf *bytes.Buffer, r *http.Request, startTime time.Time) {
+	ctx := context.Background()
+
 	if !swr.valid {
 		log.From(r.Context()).Error("speakeasy-sdk: failed to capture request response")
 		return
@@ -63,36 +68,28 @@ func (s *speakeasy) captureRequestResponse(swr *speakeasyResponseWriter, resBuf 
 		}
 	}
 
-	// TODO move to protobufs and gRPC request
-	body := struct {
-		HAR *har.HAR `json:"har"`
-	}{
-		HAR: s.buildHarFile(swr, resBuf, r, startTime),
+	conn, err := grpc.Dial(s.serverURL, grpc.WithInsecure()) // TODO: will need to configure this based on hitting the infra vs local
+	if err != nil {
+		log.From(r.Context()).Error("speakeasy-sdk: failed to create grpc connection", zap.Error(err))
+		return
 	}
+	defer conn.Close()
 
-	data, err := json.Marshal(body)
+	harData, err := json.Marshal(s.buildHarFile(swr, resBuf, r, startTime))
 	if err != nil {
 		log.From(r.Context()).Error("speakeasy-sdk: failed to ingest request body", zap.Error(err))
 		return
 	}
 
-	u := *s.serverURL
-	u.Path = path.Join(u.Path, ingestAPI)
-	ingestURL := u.String()
+	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("x-api-key", s.config.APIKey))
 
-	req, err := http.NewRequest(http.MethodPost, ingestURL, bytes.NewBuffer(data))
-	if err != nil {
-		log.From(r.Context()).Error("speakeasy-sdk: failed to create ingest request", zap.Error(err))
-		return
-	}
-	req.Header.Add("x-api-key", s.config.APIKey)
-
-	res, err := s.config.HTTPClient.Do(req)
+	_, err = ingest.NewIngestServiceClient(conn).Ingest(ctx, &ingest.IngestRequest{
+		Har: string(harData),
+	})
 	if err != nil {
 		log.From(r.Context()).Error("speakeasy-sdk: failed to send ingest request", zap.Error(err))
 		return
 	}
-	res.Body.Close()
 }
 
 func (s *speakeasy) buildHarFile(swr *speakeasyResponseWriter, resBuf *bytes.Buffer, r *http.Request, startTime time.Time) *har.HAR {

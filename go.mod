@@ -9,4 +9,7 @@ require (
 
 require gopkg.in/yaml.v2 v2.4.0 // indirect
 
-require go.uber.org/zap v1.21.0
+require (
+	github.com/speakeasy-api/speakeasy-schemas v0.0.0-20220714085110-06c27bb204f2 // indirect
+	go.uber.org/zap v1.21.0
+)
