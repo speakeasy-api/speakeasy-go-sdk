@@ -32,12 +32,14 @@ func (s *speakeasy) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		startTime := timeNow()
 
-		// We need to duplicate the request body, because it should be consumed by the next handler first before we can read it
-		// (as io.Reader is a stream and can only be read once) but we are potentially storing a large request (such as a file upload)
-		// in memory, so we may need to allow the middleware to be configured to not read the body or have a max size
 		responseBuf := &bytes.Buffer{}
-		tee := io.TeeReader(r.Body, responseBuf)
-		r.Body = ioutil.NopCloser(tee)
+		if r.Body != nil {
+			// We need to duplicate the request body, because it should be consumed by the next handler first before we can read it
+			// (as io.Reader is a stream and can only be read once) but we are potentially storing a large request (such as a file upload)
+			// in memory, so we may need to allow the middleware to be configured to not read the body or have a max size
+			tee := io.TeeReader(r.Body, responseBuf)
+			r.Body = ioutil.NopCloser(tee)
+		}
 
 		swr := newResponseWriter(w)
 
@@ -54,7 +56,7 @@ func (s *speakeasy) captureRequestResponse(swr *speakeasyResponseWriter, resBuf 
 		return
 	}
 
-	if resBuf.Len() == 0 {
+	if resBuf.Len() == 0 && r.Body != nil {
 		// Read the body just in case it was not read in the handler
 		if _, err := io.Copy(ioutil.Discard, r.Body); err != nil {
 			log.From(r.Context()).Error("speakeasy-sdk: failed to read request body", zap.Error(err))

@@ -20,7 +20,7 @@ var _ http.ResponseWriter = &speakeasyResponseWriter{}
 func newResponseWriter(w http.ResponseWriter) *speakeasyResponseWriter {
 	return &speakeasyResponseWriter{
 		ResponseWriter: w,
-		status:         -1,
+		status:         http.StatusOK,
 		valid:          true,
 	}
 }
@@ -29,10 +29,6 @@ func (r *speakeasyResponseWriter) Write(data []byte) (int, error) {
 	if _, err := r.body.Write(data); err != nil {
 		log.Logger().Error("failed to record response body", zap.Error(err))
 		r.valid = false
-	}
-
-	if r.status == -1 {
-		r.status = http.StatusOK
 	}
 
 	return r.ResponseWriter.Write(data)

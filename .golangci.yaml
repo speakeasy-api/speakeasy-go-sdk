@@ -29,6 +29,8 @@ issues:
         - scopelint
         - goerr113
         - funlen
+        - gocognit
+        - cyclop
     - path: _exports_test\.go
       linters:
         - testpackage

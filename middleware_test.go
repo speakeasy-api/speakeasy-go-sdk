@@ -41,6 +41,14 @@ func TestMiddleware_Success(t *testing.T) {
 			wantHAR: `{"log":{"version":"1.2","creator":{"name":"speakeasy-go-sdk","version":"0.0.1"},"entries":[{"startedDateTime":"2020-01-01T00:00:00Z","time":1,"request":{"method":"GET","url":"http://test.com/test","httpVersion":"HTTP/1.1","cookies":[],"headers":[],"queryString":[],"postData":{"mimeType":"application/octet-stream","params":null,"text":""},"headersSize":-1,"bodySize":0},"response":{"status":200,"statusText":"OK","httpVersion":"HTTP/1.1","cookies":[],"headers":[],"content":{"size":4,"mimeType":"application/octet-stream","text":"test"},"redirectURL":"","headersSize":-1,"bodySize":4},"cache":null,"timings":null,"serverIPAddress":"test.com"}],"comment":"request capture for http://test.com/test"}}`,
 		},
 		{
+			name: "captures basic request and no response body",
+			args: args{
+				method: http.MethodGet,
+				url:    "http://test.com/test",
+			},
+			wantHAR: `{"log":{"version":"1.2","creator":{"name":"speakeasy-go-sdk","version":"0.0.1"},"entries":[{"startedDateTime":"2020-01-01T00:00:00Z","time":1,"request":{"method":"GET","url":"http://test.com/test","httpVersion":"HTTP/1.1","cookies":[],"headers":[],"queryString":[],"postData":{"mimeType":"application/octet-stream","params":null,"text":""},"headersSize":-1,"bodySize":0},"response":{"status":200,"statusText":"OK","httpVersion":"HTTP/1.1","cookies":[],"headers":[],"content":{"size":0,"mimeType":"application/octet-stream"},"redirectURL":"","headersSize":-1,"bodySize":0},"cache":null,"timings":null,"serverIPAddress":"test.com"}],"comment":"request capture for http://test.com/test"}}`,
+		},
+		{
 			name: "captures basic request and response with no response header set",
 			args: args{
 				method:         http.MethodGet,
@@ -163,23 +171,32 @@ func TestMiddleware_Success(t *testing.T) {
 					}
 				}
 
-				data, err := ioutil.ReadAll(req.Body)
-				assert.NoError(t, err)
-				assert.Equal(t, string(tt.args.body), string(data))
+				if req.Body != nil {
+					data, err := ioutil.ReadAll(req.Body)
+					assert.NoError(t, err)
+					assert.Equal(t, string(tt.args.body), string(data))
+				}
 
-				if tt.args.responseStatus >= 0 {
+				if tt.args.responseStatus > 0 {
 					w.WriteHeader(tt.args.responseStatus)
 				}
-				_, err = w.Write(tt.args.responseBody)
-				assert.NoError(t, err)
+
+				if tt.args.responseBody != nil {
+					_, err := w.Write(tt.args.responseBody)
+					assert.NoError(t, err)
+				}
 				handled = true
 			}))
 
 			w := httptest.NewRecorder()
 
-			buf := bytes.NewBuffer(tt.args.body)
-
-			req, err := http.NewRequest(tt.args.method, tt.args.url, buf)
+			var req *http.Request
+			var err error
+			if tt.args.body == nil {
+				req, err = http.NewRequest(tt.args.method, tt.args.url, nil)
+			} else {
+				req, err = http.NewRequest(tt.args.method, tt.args.url, bytes.NewBuffer(tt.args.body))
+			}
 			assert.NoError(t, err)
 
 			for k, v := range tt.args.headers {
