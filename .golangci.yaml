@@ -12,6 +12,7 @@ linters:
     - gochecknoglobals
     - paralleltest
     - dupl
+    - containedctx
     # Deprecated
     - golint
     - maligned

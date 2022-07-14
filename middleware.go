@@ -234,9 +234,10 @@ func (s *speakeasy) getHarResponse(swr *speakeasyResponseWriter, r *http.Request
 	}
 }
 
-// This allows us to not be affected by context cancellation of the request that spawned our request capture while still retaining any context values
+// This allows us to not be affected by context cancellation of the request that spawned our request capture while still retaining any context values.
 type valueOnlyContext struct{ context.Context }
 
+// nolint
 func (valueOnlyContext) Deadline() (deadline time.Time, ok bool) { return }
 func (valueOnlyContext) Done() <-chan struct{}                   { return nil }
 func (valueOnlyContext) Err() error                              { return nil }

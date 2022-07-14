@@ -12,8 +12,6 @@ var ErrAPIKeyMissing = errors.New("API key is required")
 
 const (
 	sdkName = "speakeasy-go-sdk"
-
-	ingestAPI = "/rs/v1/ingest"
 )
 
 var (
