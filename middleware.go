@@ -209,7 +209,7 @@ func (s *speakeasy) getHarResponse(swr *speakeasyResponseWriter, r *http.Request
 		HTTPVersion: r.Proto,
 		Headers:     resHeaders,
 		Cookies:     resCookies,
-		Content: &har.Content{ // we are assuming we are getting the raw response here, so if we are put in the chain such that compression or encoding happens then th response text will be unreadable
+		Content: &har.Content{ // we are assuming we are getting the raw response here, so if we are put in the chain such that compression or encoding happens then the response text will be unreadable
 			Size:     int64(swr.body.Len()),
 			MimeType: resContentType,
 			Text:     swr.body.String(),
