@@ -12,10 +12,16 @@ linters:
     - gochecknoglobals
     - paralleltest
     - dupl
+    # Deprecated
+    - golint
+    - maligned
+    - interfacer
+    - scopelint
 issues:
   exclude:
     - "returns unexported type"
     - "unlambda"
+    - "should rewrite http.NewRequestWithContext"
   exclude-rules:
     # Exclude some linters from running on tests files.
     - path: _test\.go
@@ -31,3 +37,5 @@ issues:
     - EXC0013
     - EXC0014
     - EXC0015
+run:
+  go: "1.14"

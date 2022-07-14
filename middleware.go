@@ -61,31 +61,11 @@ func (s *speakeasy) captureRequestResponse(swr *speakeasyResponseWriter, resBuf 
 		}
 	}
 
-	h := har.HAR{}
-	h.Log = &har.Log{
-		Version: "1.2",
-		Creator: &har.Creator{
-			Name:    sdkName,
-			Version: speakeasyVersion,
-		},
-		Comment: "request capture for " + r.URL.String(),
-		Entries: []*har.Entry{
-			{
-				StartedDateTime: startTime.Format(time.RFC3339),
-				Time:            timeSince(startTime).Seconds(),
-				Request:         s.getHarRequest(r, resBuf),
-				Response:        s.getHarResponse(swr, r),
-				Connection:      r.URL.Port(),
-				ServerIPAddress: r.URL.Hostname(),
-			},
-		},
-	}
-
 	// TODO move to protobufs and gRPC request
 	body := struct {
-		HAR har.HAR `json:"har"`
+		HAR *har.HAR `json:"har"`
 	}{
-		HAR: h,
+		HAR: s.buildHarFile(swr, resBuf, r, startTime),
 	}
 
 	data, err := json.Marshal(body)
@@ -97,6 +77,7 @@ func (s *speakeasy) captureRequestResponse(swr *speakeasyResponseWriter, resBuf 
 	u := *s.serverURL
 	u.Path = path.Join(u.Path, ingestAPI)
 	ingestURL := u.String()
+
 	req, err := http.NewRequest(http.MethodPost, ingestURL, bytes.NewBuffer(data))
 	if err != nil {
 		log.From(r.Context()).Error("speakeasy-sdk: failed to create ingest request", zap.Error(err))
@@ -104,9 +85,34 @@ func (s *speakeasy) captureRequestResponse(swr *speakeasyResponseWriter, resBuf 
 	}
 	req.Header.Add("x-api-key", s.config.APIKey)
 
-	if _, err := s.config.HTTPClient.Do(req); err != nil {
+	res, err := s.config.HTTPClient.Do(req)
+	if err != nil {
 		log.From(r.Context()).Error("speakeasy-sdk: failed to send ingest request", zap.Error(err))
 		return
+	}
+	res.Body.Close()
+}
+
+func (s *speakeasy) buildHarFile(swr *speakeasyResponseWriter, resBuf *bytes.Buffer, r *http.Request, startTime time.Time) *har.HAR {
+	return &har.HAR{
+		Log: &har.Log{
+			Version: "1.2",
+			Creator: &har.Creator{
+				Name:    sdkName,
+				Version: speakeasyVersion,
+			},
+			Comment: "request capture for " + r.URL.String(),
+			Entries: []*har.Entry{
+				{
+					StartedDateTime: startTime.Format(time.RFC3339),
+					Time:            timeSince(startTime).Seconds(),
+					Request:         s.getHarRequest(r, resBuf),
+					Response:        s.getHarResponse(swr, r),
+					Connection:      r.URL.Port(),
+					ServerIPAddress: r.URL.Hostname(),
+				},
+			},
+		},
 	}
 }
 
