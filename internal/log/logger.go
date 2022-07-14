@@ -32,7 +32,7 @@ func From(ctx context.Context) *zap.Logger {
 	if l, ok := ctx.Value(loggerContextKey).(*zap.Logger); ok {
 		return l
 	}
-	return logger()
+	return Logger()
 }
 
 // WithFields returns a new context with the given fields added to the logger.
