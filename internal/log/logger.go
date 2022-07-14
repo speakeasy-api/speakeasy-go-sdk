@@ -2,7 +2,7 @@ package log
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"os"
 	"reflect"
 	"sync"
@@ -61,7 +61,7 @@ func Logger() *zap.Logger {
 			var err error
 			zapLogger, err = config.Build()
 			if err != nil {
-				fmt.Printf("Logger init failed with error: %s\n", err.Error())
+				log.Printf("ogger init failed with error: %s\n", err.Error())
 				zapLogger = zap.NewNop()
 			}
 		}
