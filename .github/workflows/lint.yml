@@ -1,7 +1,6 @@
 name: lint
 
 on:
-  push:
   pull_request:
 env:
   GOPRIVATE: "github.com/speakeasy-api"

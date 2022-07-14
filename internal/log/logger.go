@@ -2,7 +2,7 @@ package log
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"reflect"
 	"sync"
 
@@ -10,12 +10,17 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-var once sync.Once
-var logger *zap.Logger
-var config *zap.Config
+var (
+	once   sync.Once
+	logger *zap.Logger
+	config *zap.Config
+)
 
-const loggerKey = "logger"
+type contextKey string
 
+const loggerKey contextKey = "logger"
+
+// Logger returns the global logger.
 func Logger() *zap.Logger {
 	once.Do(func() {
 		if logger = zap.L(); isNopLogger(logger) {
@@ -23,7 +28,7 @@ func Logger() *zap.Logger {
 			var err error
 			logger, err = config.Build()
 			if err != nil {
-				fmt.Printf("Logger init failed with error: %s\n", err.Error())
+				log.Printf("Logger init failed with error: %s\n", err.Error())
 				logger = zap.NewNop()
 			}
 		}
@@ -32,6 +37,7 @@ func Logger() *zap.Logger {
 	return logger
 }
 
+// From returns the logger associated with the given context.
 func From(ctx context.Context) *zap.Logger {
 	if l, ok := ctx.Value(loggerKey).(*zap.Logger); ok {
 		return l
@@ -39,10 +45,12 @@ func From(ctx context.Context) *zap.Logger {
 	return Logger()
 }
 
+// With returns a new context with the provided logger.
 func With(ctx context.Context, l *zap.Logger) context.Context {
 	return context.WithValue(ctx, loggerKey, l)
 }
 
+// WithFields returns a new context with the provided fields attached to the logging context.
 func WithFields(ctx context.Context, fields ...zap.Field) context.Context {
 	if len(fields) == 0 {
 		return ctx
