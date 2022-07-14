@@ -15,6 +15,7 @@ linters:
 issues:
   exclude:
     - "returns unexported type"
+    - "unlambda"
   exclude-rules:
     # Exclude some linters from running on tests files.
     - path: _test\.go

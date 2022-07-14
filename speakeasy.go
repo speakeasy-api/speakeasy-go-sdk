@@ -7,9 +7,11 @@ import (
 	"os"
 )
 
+// ErrAPIKeyMissing is returned when the API Key is not provided at configuration time.
+var ErrAPIKeyMissing = errors.New("API key is required")
+
 const (
-	sdkName     = "speakeasy-go-sdk"
-	companyName = "Speakeasy"
+	sdkName = "speakeasy-go-sdk"
 
 	ingestAPI = "/rs/v1/ingest"
 )
@@ -50,7 +52,7 @@ func New(config Config) *speakeasy {
 
 func (s *speakeasy) configure(config Config) {
 	if config.APIKey == "" {
-		panic(errors.New("API key is required")) // TODO determine if we want to panic or return error
+		panic(ErrAPIKeyMissing)
 	}
 
 	if config.HTTPClient == nil {
