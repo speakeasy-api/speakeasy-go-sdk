@@ -7,5 +7,5 @@ func (s *speakeasy) ExportGetSpeakeasyConfig() Config {
 }
 
 func (s *speakeasy) ExportGetSpeakeasyServerURL() string {
-	return s.serverURL.String()
+	return s.serverURL
 }

@@ -2,17 +2,21 @@ package speakeasy_test
 
 import (
 	"bytes"
-	"encoding/json"
+	"context"
 	"io/ioutil"
+	"log"
+	"net"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/speakeasy-api/speakeasy-go-sdk"
+	"github.com/speakeasy-api/speakeasy-schemas/grpc/go/registry/ingest"
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/test/bufconn"
 )
 
 func TestMiddleware_Success(t *testing.T) {
@@ -129,8 +133,6 @@ func TestMiddleware_Success(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			os.Unsetenv("SPEAKEASY_SERVER_URL")
-
 			captured := false
 			handled := false
 
@@ -140,29 +142,11 @@ func TestMiddleware_Success(t *testing.T) {
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
 
-			server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-				data, err := ioutil.ReadAll(req.Body)
-				assert.NoError(t, err)
-
-				capture := struct {
-					HAR json.RawMessage `json:"har"`
-				}{}
-
-				err = json.Unmarshal(data, &capture)
-				assert.NoError(t, err)
-
-				assert.Equal(t, tt.wantHAR, string(capture.HAR))
-
-				rw.WriteHeader(http.StatusOK)
-
+			sdkInstance := speakeasy.New(speakeasy.Config{APIKey: "test", GRPCDialer: dialer(func(ctx context.Context, req *ingest.IngestRequest) {
+				assert.Equal(t, tt.wantHAR, req.Har)
 				captured = true
 				wg.Done()
-			}))
-			defer server.Close()
-
-			os.Setenv("SPEAKEASY_SERVER_URL", server.URL)
-
-			sdkInstance := speakeasy.New(speakeasy.Config{APIKey: "test", HTTPClient: server.Client()})
+			})})
 
 			h := sdkInstance.Middleware(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 				for k, v := range tt.args.responseHeaders {
@@ -220,4 +204,37 @@ func TestMiddleware_Success(t *testing.T) {
 			assert.Equal(t, responseStatus, w.Code)
 		})
 	}
+}
+
+func dialer(handlerFunc func(ctx context.Context, req *ingest.IngestRequest)) func() func(context.Context, string) (net.Conn, error) {
+	return func() func(context.Context, string) (net.Conn, error) {
+		listener := bufconn.Listen(1024 * 1024)
+
+		server := grpc.NewServer()
+
+		ingest.RegisterIngestServiceServer(server, &mockIngestServer{
+			handlerFunc: handlerFunc,
+		})
+
+		go func() {
+			if err := server.Serve(listener); err != nil {
+				log.Fatal(err)
+			}
+		}()
+
+		return func(context.Context, string) (net.Conn, error) {
+			return listener.Dial()
+		}
+	}
+}
+
+type mockIngestServer struct {
+	ingest.UnimplementedIngestServiceServer
+	handlerFunc func(ctx context.Context, req *ingest.IngestRequest)
+}
+
+func (m *mockIngestServer) Ingest(ctx context.Context, req *ingest.IngestRequest) (*ingest.IngestResponse, error) {
+	m.handlerFunc(ctx, req)
+
+	return &ingest.IngestResponse{}, nil
 }

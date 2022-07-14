@@ -14,6 +14,7 @@ import (
 	"github.com/speakeasy-api/speakeasy-schemas/grpc/go/registry/ingest"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -54,30 +55,38 @@ func (s *speakeasy) Middleware(next http.Handler) http.Handler {
 }
 
 func (s *speakeasy) captureRequestResponse(swr *speakeasyResponseWriter, resBuf *bytes.Buffer, r *http.Request, startTime time.Time) {
-	ctx := context.Background()
+	var ctx context.Context = valueOnlyContext{r.Context()}
 
 	if !swr.valid {
-		log.From(r.Context()).Error("speakeasy-sdk: failed to capture request response")
+		log.From(ctx).Error("speakeasy-sdk: failed to capture request response")
 		return
 	}
 
 	if resBuf.Len() == 0 && r.Body != nil {
 		// Read the body just in case it was not read in the handler
 		if _, err := io.Copy(ioutil.Discard, r.Body); err != nil {
-			log.From(r.Context()).Error("speakeasy-sdk: failed to read request body", zap.Error(err))
+			log.From(ctx).Error("speakeasy-sdk: failed to read request body", zap.Error(err))
 		}
 	}
 
-	conn, err := grpc.Dial(s.serverURL, grpc.WithInsecure()) // TODO: will need to configure this based on hitting the infra vs local
+	opts := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()), // TODO: will need to configure this based on hitting the infra vs local
+	}
+
+	if s.config.GRPCDialer != nil {
+		opts = append(opts, grpc.WithContextDialer(s.config.GRPCDialer()))
+	}
+
+	conn, err := grpc.DialContext(ctx, s.serverURL, opts...)
 	if err != nil {
-		log.From(r.Context()).Error("speakeasy-sdk: failed to create grpc connection", zap.Error(err))
+		log.From(ctx).Error("speakeasy-sdk: failed to create grpc connection", zap.Error(err))
 		return
 	}
 	defer conn.Close()
 
 	harData, err := json.Marshal(s.buildHarFile(swr, resBuf, r, startTime))
 	if err != nil {
-		log.From(r.Context()).Error("speakeasy-sdk: failed to ingest request body", zap.Error(err))
+		log.From(ctx).Error("speakeasy-sdk: failed to ingest request body", zap.Error(err))
 		return
 	}
 
@@ -87,7 +96,7 @@ func (s *speakeasy) captureRequestResponse(swr *speakeasyResponseWriter, resBuf 
 		Har: string(harData),
 	})
 	if err != nil {
-		log.From(r.Context()).Error("speakeasy-sdk: failed to send ingest request", zap.Error(err))
+		log.From(ctx).Error("speakeasy-sdk: failed to send ingest request", zap.Error(err))
 		return
 	}
 }
@@ -224,3 +233,10 @@ func (s *speakeasy) getHarResponse(swr *speakeasyResponseWriter, r *http.Request
 		BodySize:    resBodySize,
 	}
 }
+
+// This allows us to not be affected by context cancellation of the request that spawned our request capture while still retaining any context values
+type valueOnlyContext struct{ context.Context }
+
+func (valueOnlyContext) Deadline() (deadline time.Time, ok bool) { return }
+func (valueOnlyContext) Done() <-chan struct{}                   { return nil }
+func (valueOnlyContext) Err() error                              { return nil }

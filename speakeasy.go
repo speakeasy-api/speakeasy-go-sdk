@@ -1,8 +1,9 @@
 package speakeasy
 
 import (
+	"context"
 	"errors"
-	"net/http"
+	"net"
 	"os"
 )
 
@@ -25,7 +26,7 @@ var (
 // Config provides configuration for the Speakeasy SDK.
 type Config struct {
 	APIKey     string
-	HTTPClient *http.Client
+	GRPCDialer func() func(context.Context, string) (net.Conn, error)
 }
 
 type speakeasy struct {
@@ -52,10 +53,6 @@ func New(config Config) *speakeasy {
 func (s *speakeasy) configure(config Config) {
 	if config.APIKey == "" {
 		panic(ErrAPIKeyMissing)
-	}
-
-	if config.HTTPClient == nil {
-		config.HTTPClient = http.DefaultClient
 	}
 
 	configuredServerURL := serverURL
