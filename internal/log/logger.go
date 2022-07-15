@@ -2,7 +2,8 @@ package log
 
 import (
 	"context"
-	"fmt"
+	"log"
+	"os"
 	"reflect"
 	"sync"
 
@@ -10,39 +11,31 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-var once sync.Once
-var logger *zap.Logger
-var config *zap.Config
+var (
+	once      sync.Once
+	zapLogger *zap.Logger
+	config    *zap.Config
+)
 
-const loggerKey = "logger"
+type contextKey string
 
-func Logger() *zap.Logger {
-	once.Do(func() {
-		if logger = zap.L(); isNopLogger(logger) {
-			config = createConfig()
-			var err error
-			logger, err = config.Build()
-			if err != nil {
-				fmt.Printf("Logger init failed with error: %s\n", err.Error())
-				logger = zap.NewNop()
-			}
-		}
-	})
-
-	return logger
+func (c contextKey) String() string {
+	return "logger-" + string(c)
 }
 
+const (
+	loggerContextKey = contextKey("context")
+)
+
+// From returns the logger associated with the given context.
 func From(ctx context.Context) *zap.Logger {
-	if l, ok := ctx.Value(loggerKey).(*zap.Logger); ok {
+	if l, ok := ctx.Value(loggerContextKey).(*zap.Logger); ok {
 		return l
 	}
 	return Logger()
 }
 
-func With(ctx context.Context, l *zap.Logger) context.Context {
-	return context.WithValue(ctx, loggerKey, l)
-}
-
+// WithFields returns a new context with the given fields added to the logger.
 func WithFields(ctx context.Context, fields ...zap.Field) context.Context {
 	if len(fields) == 0 {
 		return ctx
@@ -50,11 +43,47 @@ func WithFields(ctx context.Context, fields ...zap.Field) context.Context {
 	return With(ctx, From(ctx).With(fields...))
 }
 
+// Sync flushes any buffered log entries.
+func Sync(ctx context.Context) error {
+	return From(ctx).Sync()
+}
+
+// With returns a new context with the given logger added to the context.
+func With(ctx context.Context, l *zap.Logger) context.Context {
+	return context.WithValue(ctx, loggerContextKey, l)
+}
+
+// Logger returns the global logger.
+func Logger() *zap.Logger {
+	once.Do(func() {
+		if zapLogger = zap.L(); isNopLogger(zapLogger) {
+			config = createConfig()
+			var err error
+			zapLogger, err = config.Build()
+			if err != nil {
+				log.Printf("ogger init failed with error: %s\n", err.Error())
+				zapLogger = zap.NewNop()
+			}
+		}
+	})
+
+	return zapLogger
+}
+
 func createConfig() *zap.Config {
+	development := false
+	level := zap.NewAtomicLevelAt(zap.InfoLevel)
+
+	env := os.Getenv("SPEAKEASY_ENVIRONMENT")
+	if env == "local" || env == "docker" {
+		development = true
+		level = zap.NewAtomicLevelAt(zap.DebugLevel)
+	}
+
 	return &zap.Config{
-		Level:       zap.NewAtomicLevelAt(zap.DebugLevel),
-		Development: true,
-		Encoding:    "console",
+		Level:       level,
+		Development: development,
+		Encoding:    "json",
 		EncoderConfig: zapcore.EncoderConfig{
 			MessageKey:    "message",
 			LevelKey:      "level",
