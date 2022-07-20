@@ -39,6 +39,7 @@ issues:
         - gocognit
         - cyclop
         - noctx
+        - nosnakecase
     - path: _exports_test\.go
       linters:
         - testpackage
