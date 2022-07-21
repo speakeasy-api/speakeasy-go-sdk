@@ -3,6 +3,7 @@ package speakeasy
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"io"
 	"io/ioutil"
@@ -69,8 +70,13 @@ func (s *speakeasy) captureRequestResponse(swr *speakeasyResponseWriter, resBuf 
 		}
 	}
 
-	opts := []grpc.DialOption{
-		grpc.WithTransportCredentials(insecure.NewCredentials()), // TODO: will need to configure this based on hitting the infra vs local
+	opts := []grpc.DialOption{}
+
+	if s.secure {
+		// nolint: gosec
+		opts = append(opts, grpc.WithTransportCredentials(insecure.NewTLS(&tls.Config{InsecureSkipVerify: true})))
+	} else {
+		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
 
 	if s.config.GRPCDialer != nil {
