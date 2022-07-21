@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -133,7 +134,7 @@ func TestMiddleware_Success(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("SPEAKEASY_SERVER_SECURE", "false")
+			os.Setenv("SPEAKEASY_SERVER_SECURE", "false")
 
 			captured := false
 			handled := false
