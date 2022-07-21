@@ -134,6 +134,7 @@ func TestMiddleware_Success(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// nolint:tenv,nolintlint
 			os.Setenv("SPEAKEASY_SERVER_SECURE", "false")
 
 			captured := false
