@@ -32,6 +32,7 @@ issues:
         - funlen
         - gocognit
         - cyclop
+        - nosnakecase
     - path: _exports_test\.go
       linters:
         - testpackage
