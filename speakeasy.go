@@ -15,7 +15,7 @@ const (
 )
 
 var (
-	speakeasyVersion = "0.0.1"
+	speakeasyVersion = "0.0.2" // TODO get this from CI
 	serverURL        = "https://api.speakeasyapi.dev"
 
 	defaultInstance *speakeasy
@@ -30,6 +30,7 @@ type Config struct {
 type speakeasy struct {
 	config    Config
 	serverURL string
+	secure    bool
 }
 
 // Configure allows you to configure the default instance of the Speakeasy SDK.
@@ -60,7 +61,14 @@ func (s *speakeasy) configure(config Config) {
 		configuredServerURL = envServerURL
 	}
 
+	secure := true
+	envSecure := os.Getenv("SPEAKEASY_SERVER_SECURE")
+	if envSecure == "false" {
+		secure = false
+	}
+
 	s.serverURL = configuredServerURL
+	s.secure = secure
 
 	s.config = config
 }

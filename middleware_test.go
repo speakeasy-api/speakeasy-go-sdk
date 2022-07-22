@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -47,7 +48,7 @@ func TestSpeakeasy_Middleware_Capture_Success(t *testing.T) {
 				responseStatus: http.StatusOK,
 				responseBody:   []byte("test"),
 			},
-			wantHAR: `{"log":{"version":"1.2","creator":{"name":"speakeasy-go-sdk","version":"0.0.1"},"entries":[{"startedDateTime":"2020-01-01T00:00:00Z","time":1,"request":{"method":"GET","url":"http://test.com/test","httpVersion":"HTTP/1.1","cookies":[],"headers":[],"queryString":[],"postData":{"mimeType":"application/octet-stream","params":null,"text":""},"headersSize":-1,"bodySize":0},"response":{"status":200,"statusText":"OK","httpVersion":"HTTP/1.1","cookies":[],"headers":[],"content":{"size":4,"mimeType":"application/octet-stream","text":"test"},"redirectURL":"","headersSize":-1,"bodySize":4},"cache":null,"timings":null,"serverIPAddress":"test.com"}],"comment":"request capture for http://test.com/test"}}`,
+			wantHAR: `{"log":{"version":"1.2","creator":{"name":"speakeasy-go-sdk","version":"0.0.2"},"entries":[{"startedDateTime":"2020-01-01T00:00:00Z","time":1,"request":{"method":"GET","url":"http://test.com/test","httpVersion":"HTTP/1.1","cookies":[],"headers":[],"queryString":[],"postData":{"mimeType":"application/octet-stream","params":null,"text":""},"headersSize":-1,"bodySize":0},"response":{"status":200,"statusText":"OK","httpVersion":"HTTP/1.1","cookies":[],"headers":[],"content":{"size":4,"mimeType":"application/octet-stream","text":"test"},"redirectURL":"","headersSize":-1,"bodySize":4},"cache":null,"timings":null,"serverIPAddress":"test.com"}],"comment":"request capture for http://test.com/test"}}`,
 		},
 		{
 			name: "captures basic request and no response body",
@@ -55,7 +56,7 @@ func TestSpeakeasy_Middleware_Capture_Success(t *testing.T) {
 				method: http.MethodGet,
 				url:    "http://test.com/test",
 			},
-			wantHAR: `{"log":{"version":"1.2","creator":{"name":"speakeasy-go-sdk","version":"0.0.1"},"entries":[{"startedDateTime":"2020-01-01T00:00:00Z","time":1,"request":{"method":"GET","url":"http://test.com/test","httpVersion":"HTTP/1.1","cookies":[],"headers":[],"queryString":[],"postData":{"mimeType":"application/octet-stream","params":null,"text":""},"headersSize":-1,"bodySize":0},"response":{"status":200,"statusText":"OK","httpVersion":"HTTP/1.1","cookies":[],"headers":[],"content":{"size":0,"mimeType":"application/octet-stream"},"redirectURL":"","headersSize":-1,"bodySize":0},"cache":null,"timings":null,"serverIPAddress":"test.com"}],"comment":"request capture for http://test.com/test"}}`,
+			wantHAR: `{"log":{"version":"1.2","creator":{"name":"speakeasy-go-sdk","version":"0.0.2"},"entries":[{"startedDateTime":"2020-01-01T00:00:00Z","time":1,"request":{"method":"GET","url":"http://test.com/test","httpVersion":"HTTP/1.1","cookies":[],"headers":[],"queryString":[],"postData":{"mimeType":"application/octet-stream","params":null,"text":""},"headersSize":-1,"bodySize":0},"response":{"status":200,"statusText":"OK","httpVersion":"HTTP/1.1","cookies":[],"headers":[],"content":{"size":0,"mimeType":"application/octet-stream"},"redirectURL":"","headersSize":-1,"bodySize":0},"cache":null,"timings":null,"serverIPAddress":"test.com"}],"comment":"request capture for http://test.com/test"}}`,
 		},
 		{
 			name: "captures basic request and response with no response header set",
@@ -65,7 +66,7 @@ func TestSpeakeasy_Middleware_Capture_Success(t *testing.T) {
 				responseStatus: -1,
 				responseBody:   []byte("test"),
 			},
-			wantHAR: `{"log":{"version":"1.2","creator":{"name":"speakeasy-go-sdk","version":"0.0.1"},"entries":[{"startedDateTime":"2020-01-01T00:00:00Z","time":1,"request":{"method":"GET","url":"http://test.com/test","httpVersion":"HTTP/1.1","cookies":[],"headers":[],"queryString":[],"postData":{"mimeType":"application/octet-stream","params":null,"text":""},"headersSize":-1,"bodySize":0},"response":{"status":200,"statusText":"OK","httpVersion":"HTTP/1.1","cookies":[],"headers":[{"name":"Content-Type","value":"text/plain; charset=utf-8"}],"content":{"size":4,"mimeType":"text/plain; charset=utf-8","text":"test"},"redirectURL":"","headersSize":-1,"bodySize":4},"cache":null,"timings":null,"serverIPAddress":"test.com"}],"comment":"request capture for http://test.com/test"}}`,
+			wantHAR: `{"log":{"version":"1.2","creator":{"name":"speakeasy-go-sdk","version":"0.0.2"},"entries":[{"startedDateTime":"2020-01-01T00:00:00Z","time":1,"request":{"method":"GET","url":"http://test.com/test","httpVersion":"HTTP/1.1","cookies":[],"headers":[],"queryString":[],"postData":{"mimeType":"application/octet-stream","params":null,"text":""},"headersSize":-1,"bodySize":0},"response":{"status":200,"statusText":"OK","httpVersion":"HTTP/1.1","cookies":[],"headers":[{"name":"Content-Type","value":"text/plain; charset=utf-8"}],"content":{"size":4,"mimeType":"text/plain; charset=utf-8","text":"test"},"redirectURL":"","headersSize":-1,"bodySize":4},"cache":null,"timings":null,"serverIPAddress":"test.com"}],"comment":"request capture for http://test.com/test"}}`,
 		},
 		{
 			name: "captures basic request and response with different content types",
@@ -77,7 +78,7 @@ func TestSpeakeasy_Middleware_Capture_Success(t *testing.T) {
 				responseBody:    []byte("test"),
 				responseHeaders: map[string][]string{"Content-Type": {"text/plain; charset=utf-8"}},
 			},
-			wantHAR: `{"log":{"version":"1.2","creator":{"name":"speakeasy-go-sdk","version":"0.0.1"},"entries":[{"startedDateTime":"2020-01-01T00:00:00Z","time":1,"request":{"method":"GET","url":"http://test.com/test","httpVersion":"HTTP/1.1","cookies":[],"headers":[{"name":"Content-Type","value":"application/json"}],"queryString":[],"postData":{"mimeType":"application/json","params":null,"text":""},"headersSize":-1,"bodySize":0},"response":{"status":200,"statusText":"OK","httpVersion":"HTTP/1.1","cookies":[],"headers":[{"name":"Content-Type","value":"text/plain; charset=utf-8"}],"content":{"size":4,"mimeType":"text/plain; charset=utf-8","text":"test"},"redirectURL":"","headersSize":-1,"bodySize":4},"cache":null,"timings":null,"serverIPAddress":"test.com"}],"comment":"request capture for http://test.com/test"}}`,
+			wantHAR: `{"log":{"version":"1.2","creator":{"name":"speakeasy-go-sdk","version":"0.0.2"},"entries":[{"startedDateTime":"2020-01-01T00:00:00Z","time":1,"request":{"method":"GET","url":"http://test.com/test","httpVersion":"HTTP/1.1","cookies":[],"headers":[{"name":"Content-Type","value":"application/json"}],"queryString":[],"postData":{"mimeType":"application/json","params":null,"text":""},"headersSize":-1,"bodySize":0},"response":{"status":200,"statusText":"OK","httpVersion":"HTTP/1.1","cookies":[],"headers":[{"name":"Content-Type","value":"text/plain; charset=utf-8"}],"content":{"size":4,"mimeType":"text/plain; charset=utf-8","text":"test"},"redirectURL":"","headersSize":-1,"bodySize":4},"cache":null,"timings":null,"serverIPAddress":"test.com"}],"comment":"request capture for http://test.com/test"}}`,
 		},
 		{
 			name: "captures post request with body",
@@ -90,7 +91,7 @@ func TestSpeakeasy_Middleware_Capture_Success(t *testing.T) {
 				responseBody:    []byte("test"),
 				responseHeaders: map[string][]string{"Content-Type": {"text/plain; charset=utf-8"}},
 			},
-			wantHAR: `{"log":{"version":"1.2","creator":{"name":"speakeasy-go-sdk","version":"0.0.1"},"entries":[{"startedDateTime":"2020-01-01T00:00:00Z","time":1,"request":{"method":"POST","url":"http://test.com/test","httpVersion":"HTTP/1.1","cookies":[],"headers":[{"name":"Content-Type","value":"application/json"}],"queryString":[],"postData":{"mimeType":"application/json","params":null,"text":"{test: \"test\"}"},"headersSize":-1,"bodySize":14},"response":{"status":200,"statusText":"OK","httpVersion":"HTTP/1.1","cookies":[],"headers":[{"name":"Content-Type","value":"text/plain; charset=utf-8"}],"content":{"size":4,"mimeType":"text/plain; charset=utf-8","text":"test"},"redirectURL":"","headersSize":-1,"bodySize":4},"cache":null,"timings":null,"serverIPAddress":"test.com"}],"comment":"request capture for http://test.com/test"}}`,
+			wantHAR: `{"log":{"version":"1.2","creator":{"name":"speakeasy-go-sdk","version":"0.0.2"},"entries":[{"startedDateTime":"2020-01-01T00:00:00Z","time":1,"request":{"method":"POST","url":"http://test.com/test","httpVersion":"HTTP/1.1","cookies":[],"headers":[{"name":"Content-Type","value":"application/json"}],"queryString":[],"postData":{"mimeType":"application/json","params":null,"text":"{test: \"test\"}"},"headersSize":-1,"bodySize":14},"response":{"status":200,"statusText":"OK","httpVersion":"HTTP/1.1","cookies":[],"headers":[{"name":"Content-Type","value":"text/plain; charset=utf-8"}],"content":{"size":4,"mimeType":"text/plain; charset=utf-8","text":"test"},"redirectURL":"","headersSize":-1,"bodySize":4},"cache":null,"timings":null,"serverIPAddress":"test.com"}],"comment":"request capture for http://test.com/test"}}`,
 		},
 		{
 			name: "captures query params",
@@ -100,7 +101,7 @@ func TestSpeakeasy_Middleware_Capture_Success(t *testing.T) {
 				responseStatus: http.StatusOK,
 				responseBody:   []byte("test"),
 			},
-			wantHAR: `{"log":{"version":"1.2","creator":{"name":"speakeasy-go-sdk","version":"0.0.1"},"entries":[{"startedDateTime":"2020-01-01T00:00:00Z","time":1,"request":{"method":"GET","url":"http://test.com/test?param1=value1","httpVersion":"HTTP/1.1","cookies":[],"headers":[],"queryString":[{"name":"param1","value":"value1"}],"postData":{"mimeType":"application/octet-stream","params":null,"text":""},"headersSize":-1,"bodySize":0},"response":{"status":200,"statusText":"OK","httpVersion":"HTTP/1.1","cookies":[],"headers":[],"content":{"size":4,"mimeType":"application/octet-stream","text":"test"},"redirectURL":"","headersSize":-1,"bodySize":4},"cache":null,"timings":null,"serverIPAddress":"test.com"}],"comment":"request capture for http://test.com/test?param1=value1"}}`,
+			wantHAR: `{"log":{"version":"1.2","creator":{"name":"speakeasy-go-sdk","version":"0.0.2"},"entries":[{"startedDateTime":"2020-01-01T00:00:00Z","time":1,"request":{"method":"GET","url":"http://test.com/test?param1=value1","httpVersion":"HTTP/1.1","cookies":[],"headers":[],"queryString":[{"name":"param1","value":"value1"}],"postData":{"mimeType":"application/octet-stream","params":null,"text":""},"headersSize":-1,"bodySize":0},"response":{"status":200,"statusText":"OK","httpVersion":"HTTP/1.1","cookies":[],"headers":[],"content":{"size":4,"mimeType":"application/octet-stream","text":"test"},"redirectURL":"","headersSize":-1,"bodySize":4},"cache":null,"timings":null,"serverIPAddress":"test.com"}],"comment":"request capture for http://test.com/test?param1=value1"}}`,
 		},
 		{
 			name: "captures cookies",
@@ -112,7 +113,7 @@ func TestSpeakeasy_Middleware_Capture_Success(t *testing.T) {
 				responseBody:    []byte("test"),
 				responseHeaders: map[string][]string{"Set-Cookie": {"cookie1=value1; cookie2=value2"}},
 			},
-			wantHAR: `{"log":{"version":"1.2","creator":{"name":"speakeasy-go-sdk","version":"0.0.1"},"entries":[{"startedDateTime":"2020-01-01T00:00:00Z","time":1,"request":{"method":"GET","url":"http://test.com/test","httpVersion":"HTTP/1.1","cookies":[{"name":"cookie1","value":"value1","expires":"0001-01-01T00:00:00Z"},{"name":"cookie2","value":"value2","expires":"0001-01-01T00:00:00Z"}],"headers":[],"queryString":[],"postData":{"mimeType":"application/octet-stream","params":null,"text":""},"headersSize":-1,"bodySize":0},"response":{"status":200,"statusText":"OK","httpVersion":"HTTP/1.1","cookies":[{"name":"cookie1","value":"value1","expires":"0001-01-01T00:00:00Z"},{"name":"cookie2","value":"value2","expires":"0001-01-01T00:00:00Z"}],"headers":[],"content":{"size":4,"mimeType":"application/octet-stream","text":"test"},"redirectURL":"","headersSize":-1,"bodySize":4},"cache":null,"timings":null,"serverIPAddress":"test.com"}],"comment":"request capture for http://test.com/test"}}`,
+			wantHAR: `{"log":{"version":"1.2","creator":{"name":"speakeasy-go-sdk","version":"0.0.2"},"entries":[{"startedDateTime":"2020-01-01T00:00:00Z","time":1,"request":{"method":"GET","url":"http://test.com/test","httpVersion":"HTTP/1.1","cookies":[{"name":"cookie1","value":"value1","expires":"0001-01-01T00:00:00Z"},{"name":"cookie2","value":"value2","expires":"0001-01-01T00:00:00Z"}],"headers":[],"queryString":[],"postData":{"mimeType":"application/octet-stream","params":null,"text":""},"headersSize":-1,"bodySize":0},"response":{"status":200,"statusText":"OK","httpVersion":"HTTP/1.1","cookies":[{"name":"cookie1","value":"value1","expires":"0001-01-01T00:00:00Z"},{"name":"cookie2","value":"value2","expires":"0001-01-01T00:00:00Z"}],"headers":[],"content":{"size":4,"mimeType":"application/octet-stream","text":"test"},"redirectURL":"","headersSize":-1,"bodySize":4},"cache":null,"timings":null,"serverIPAddress":"test.com"}],"comment":"request capture for http://test.com/test"}}`,
 		},
 		{
 			name: "captures redirect",
@@ -123,7 +124,7 @@ func TestSpeakeasy_Middleware_Capture_Success(t *testing.T) {
 				responseBody:    []byte("test"),
 				responseHeaders: map[string][]string{"Location": {"http://test.com/test2"}},
 			},
-			wantHAR: `{"log":{"version":"1.2","creator":{"name":"speakeasy-go-sdk","version":"0.0.1"},"entries":[{"startedDateTime":"2020-01-01T00:00:00Z","time":1,"request":{"method":"GET","url":"http://test.com/test","httpVersion":"HTTP/1.1","cookies":[],"headers":[],"queryString":[],"postData":{"mimeType":"application/octet-stream","params":null,"text":""},"headersSize":-1,"bodySize":0},"response":{"status":200,"statusText":"OK","httpVersion":"HTTP/1.1","cookies":[],"headers":[{"name":"Location","value":"http://test.com/test2"}],"content":{"size":4,"mimeType":"application/octet-stream","text":"test"},"redirectURL":"http://test.com/test2","headersSize":-1,"bodySize":4},"cache":null,"timings":null,"serverIPAddress":"test.com"}],"comment":"request capture for http://test.com/test"}}`,
+			wantHAR: `{"log":{"version":"1.2","creator":{"name":"speakeasy-go-sdk","version":"0.0.2"},"entries":[{"startedDateTime":"2020-01-01T00:00:00Z","time":1,"request":{"method":"GET","url":"http://test.com/test","httpVersion":"HTTP/1.1","cookies":[],"headers":[],"queryString":[],"postData":{"mimeType":"application/octet-stream","params":null,"text":""},"headersSize":-1,"bodySize":0},"response":{"status":200,"statusText":"OK","httpVersion":"HTTP/1.1","cookies":[],"headers":[{"name":"Location","value":"http://test.com/test2"}],"content":{"size":4,"mimeType":"application/octet-stream","text":"test"},"redirectURL":"http://test.com/test2","headersSize":-1,"bodySize":4},"cache":null,"timings":null,"serverIPAddress":"test.com"}],"comment":"request capture for http://test.com/test"}}`,
 		},
 		{
 			name: "captures body size zero when cached",
@@ -133,11 +134,14 @@ func TestSpeakeasy_Middleware_Capture_Success(t *testing.T) {
 				responseStatus: http.StatusNotModified,
 				responseBody:   []byte("test"),
 			},
-			wantHAR: `{"log":{"version":"1.2","creator":{"name":"speakeasy-go-sdk","version":"0.0.1"},"entries":[{"startedDateTime":"2020-01-01T00:00:00Z","time":1,"request":{"method":"GET","url":"http://test.com/test","httpVersion":"HTTP/1.1","cookies":[],"headers":[],"queryString":[],"postData":{"mimeType":"application/octet-stream","params":null,"text":""},"headersSize":-1,"bodySize":0},"response":{"status":304,"statusText":"Not Modified","httpVersion":"HTTP/1.1","cookies":[],"headers":[],"content":{"size":4,"mimeType":"application/octet-stream","text":"test"},"redirectURL":"","headersSize":-1,"bodySize":0},"cache":null,"timings":null,"serverIPAddress":"test.com"}],"comment":"request capture for http://test.com/test"}}`,
+			wantHAR: `{"log":{"version":"1.2","creator":{"name":"speakeasy-go-sdk","version":"0.0.2"},"entries":[{"startedDateTime":"2020-01-01T00:00:00Z","time":1,"request":{"method":"GET","url":"http://test.com/test","httpVersion":"HTTP/1.1","cookies":[],"headers":[],"queryString":[],"postData":{"mimeType":"application/octet-stream","params":null,"text":""},"headersSize":-1,"bodySize":0},"response":{"status":304,"statusText":"Not Modified","httpVersion":"HTTP/1.1","cookies":[],"headers":[],"content":{"size":4,"mimeType":"application/octet-stream","text":"test"},"redirectURL":"","headersSize":-1,"bodySize":0},"cache":null,"timings":null,"serverIPAddress":"test.com"}],"comment":"request capture for http://test.com/test"}}`,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// nolint:tenv,nolintlint
+			os.Setenv("SPEAKEASY_SERVER_SECURE", "false")
+
 			captured := false
 			handled := false
 
