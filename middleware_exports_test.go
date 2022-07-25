@@ -13,3 +13,7 @@ func ExportSetTimeSince(d time.Duration) {
 		return d
 	}
 }
+
+func ExportSetMaxCaptureSize(ms int) {
+	maxCaptureSize = ms
+}

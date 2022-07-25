@@ -1,0 +1,23 @@
+{
+    "name": "captures post request with Body",
+    "fields": {
+        "max_capture_size": 9437184
+    },
+    "args": {
+        "method": "POST",
+        "url": "http://test.com/test",
+        "headers": {
+            "Content-Type": [
+                "application/json"
+            ]
+        },
+        "body": "e3Rlc3Q6ICJ0ZXN0In0=",
+        "response_status": -1,
+        "response_body": "dGVzdA==",
+        "response_headers": {
+            "Content-Type": [
+                "text/plain; charset=utf-8"
+            ]
+        }
+    }
+}

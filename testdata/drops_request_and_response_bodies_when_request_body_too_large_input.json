@@ -1,0 +1,23 @@
+{
+    "name": "drops request and response bodies when request Body too large",
+    "fields": {
+        "max_capture_size": 10
+    },
+    "args": {
+        "method": "POST",
+        "url": "http://test.com/test",
+        "headers": {
+            "Content-Type": [
+                "application/json"
+            ]
+        },
+        "body": "eyJ0b29MYXJnZSI6ICJ2ZXJ5TGFyZ2UifQ==",
+        "response_status": 200,
+        "response_body": "bm8gcm9vbSBsZWZ0IGZvciByZXNwb25zZSB0byBiZSBjYXB0dXJlZA==",
+        "response_headers": {
+            "Content-Type": [
+                "text/plain; charset=utf-8"
+            ]
+        }
+    }
+}

@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
 	"time"
 
 	"github.com/chromedp/cdproto/har"
@@ -19,6 +20,8 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 )
+
+var maxCaptureSize = 9 * 1024 * 1024
 
 var timeNow = func() time.Time {
 	return time.Now()
@@ -43,21 +46,20 @@ func (s *speakeasy) handleRequestResponse(w http.ResponseWriter, r *http.Request
 func (s *speakeasy) handleRequestResponseError(w http.ResponseWriter, r *http.Request, next handlerFunc, capturePathHint func(r *http.Request) string) error {
 	startTime := timeNow()
 
-	responseBuf := &bytes.Buffer{}
+	cw := NewCaptureWriter(w, maxCaptureSize)
+
 	if r.Body != nil {
 		// We need to duplicate the request body, because it should be consumed by the next handler first before we can read it
 		// (as io.Reader is a stream and can only be read once) but we are potentially storing a large request (such as a file upload)
 		// in memory, so we may need to allow the middleware to be configured to not read the body or have a max size
-		tee := io.TeeReader(r.Body, responseBuf)
+		tee := io.TeeReader(r.Body, cw.GetRequestWriter())
 		r.Body = ioutil.NopCloser(tee)
 	}
-
-	swr := newResponseWriter(w)
 
 	ctx, c := contextWithController(r.Context())
 	r = r.WithContext(ctx)
 
-	err := next(swr, r)
+	err := next(cw.GetResponseWriter(), r)
 
 	pathHint := capturePathHint(r)
 
@@ -67,20 +69,15 @@ func (s *speakeasy) handleRequestResponseError(w http.ResponseWriter, r *http.Re
 	}
 
 	// Assuming response is done
-	go s.captureRequestResponse(swr, responseBuf, r, startTime, pathHint)
+	go s.captureRequestResponse(cw, r, startTime, pathHint)
 
 	return err
 }
 
-func (s *speakeasy) captureRequestResponse(swr *speakeasyResponseWriter, resBuf *bytes.Buffer, r *http.Request, startTime time.Time, pathHint string) {
+func (s *speakeasy) captureRequestResponse(cw *captureWriter, r *http.Request, startTime time.Time, pathHint string) {
 	var ctx context.Context = valueOnlyContext{r.Context()}
 
-	if !swr.valid {
-		log.From(ctx).Error("speakeasy-sdk: failed to capture request response")
-		return
-	}
-
-	if resBuf.Len() == 0 && r.Body != nil {
+	if cw.IsReqValid() && cw.GetReqBuffer().Len() == 0 && r.Body != nil {
 		// Read the body just in case it was not read in the handler
 		if _, err := io.Copy(ioutil.Discard, r.Body); err != nil {
 			log.From(ctx).Error("speakeasy-sdk: failed to read request body", zap.Error(err))
@@ -107,7 +104,7 @@ func (s *speakeasy) captureRequestResponse(swr *speakeasyResponseWriter, resBuf 
 	}
 	defer conn.Close()
 
-	harData, err := json.Marshal(s.buildHarFile(swr, resBuf.String(), r, startTime))
+	harData, err := json.Marshal(s.buildHarFile(ctx, cw, r, startTime))
 	if err != nil {
 		log.From(ctx).Error("speakeasy-sdk: failed to ingest request body", zap.Error(err))
 		return
@@ -125,7 +122,7 @@ func (s *speakeasy) captureRequestResponse(swr *speakeasyResponseWriter, resBuf 
 	}
 }
 
-func (s *speakeasy) buildHarFile(swr *speakeasyResponseWriter, resBody string, r *http.Request, startTime time.Time) *har.HAR {
+func (s *speakeasy) buildHarFile(ctx context.Context, cw *captureWriter, r *http.Request, startTime time.Time) *har.HAR {
 	return &har.HAR{
 		Log: &har.Log{
 			Version: "1.2",
@@ -138,8 +135,8 @@ func (s *speakeasy) buildHarFile(swr *speakeasyResponseWriter, resBody string, r
 				{
 					StartedDateTime: startTime.Format(time.RFC3339),
 					Time:            timeSince(startTime).Seconds(),
-					Request:         s.getHarRequest(r, resBody),
-					Response:        s.getHarResponse(swr, r),
+					Request:         s.getHarRequest(ctx, cw, r),
+					Response:        s.getHarResponse(ctx, cw, r),
 					Connection:      r.URL.Port(),
 					ServerIPAddress: r.URL.Hostname(),
 				},
@@ -148,7 +145,7 @@ func (s *speakeasy) buildHarFile(swr *speakeasyResponseWriter, resBody string, r
 	}
 }
 
-func (s *speakeasy) getHarRequest(r *http.Request, resBody string) *har.Request {
+func (s *speakeasy) getHarRequest(ctx context.Context, cw *captureWriter, r *http.Request) *har.Request {
 	reqHeaders := []*har.NameValuePair{}
 	for k, v := range r.Header {
 		if k != "Cookie" {
@@ -185,6 +182,27 @@ func (s *speakeasy) getHarRequest(r *http.Request, resBody string) *har.Request 
 		reqContentType = "application/octet-stream" // default http content type
 	}
 
+	bodyText := "--dropped--"
+	if cw.IsReqValid() {
+		bodyText = cw.GetReqBuffer().String()
+	}
+
+	hw := httptest.NewRecorder()
+
+	for k, vv := range r.Header {
+		for _, v := range vv {
+			hw.Header().Set(k, v)
+		}
+	}
+
+	b := bytes.NewBuffer([]byte{})
+	headerSize := -1
+	if err := hw.Header().Write(b); err != nil {
+		log.From(ctx).Error("speakeasy-sdk: failed to read length of request headers", zap.Error(err))
+	} else {
+		headerSize = b.Len()
+	}
+
 	return &har.Request{
 		Method:      r.Method,
 		URL:         r.URL.String(),
@@ -193,22 +211,22 @@ func (s *speakeasy) getHarRequest(r *http.Request, resBody string) *har.Request 
 		BodySize:    r.ContentLength,
 		PostData: &har.PostData{
 			MimeType: reqContentType,
-			Text:     resBody,
+			Text:     bodyText,
 			Params:   nil, // We don't parse the body here to populate this
 		},
 		HTTPVersion: r.Proto,
 		Cookies:     reqCookies,
-		HeadersSize: -1, // TODO do we need to calculate this? If so we can get it with r.Header.Write to a bytes.Buffer and read size
+		HeadersSize: int64(headerSize),
 	}
 }
 
-func (s *speakeasy) getHarResponse(swr *speakeasyResponseWriter, r *http.Request) *har.Response {
+func (s *speakeasy) getHarResponse(ctx context.Context, cw *captureWriter, r *http.Request) *har.Response {
 	resHeaders := []*har.NameValuePair{}
 	cookieParser := http.Request{
 		Header: http.Header{},
 	}
 
-	for k, v := range swr.Header() {
+	for k, v := range cw.origResW.Header() {
 		for _, vv := range v {
 			if k == "Set-Cookie" {
 				cookieParser.Header.Add("Cookie", vv)
@@ -231,30 +249,45 @@ func (s *speakeasy) getHarResponse(swr *speakeasyResponseWriter, r *http.Request
 		})
 	}
 
-	resContentType := swr.Header().Get("Content-Type")
+	resContentType := cw.origResW.Header().Get("Content-Type")
 	if resContentType == "" {
 		resContentType = "application/octet-stream" // default http content type
 	}
 
-	resBodySize := int64(swr.body.Len())
-	if swr.status == http.StatusNotModified {
-		resBodySize = 0
+	bodyText := "--dropped--"
+	contentBodySize := 0
+	if cw.IsResValid() {
+		bodyText = cw.GetResBuffer().String()
+		contentBodySize = cw.GetResBuffer().Len()
+	}
+
+	bodySize := cw.GetResponseSize()
+	if cw.GetStatus() == http.StatusNotModified {
+		bodySize = 0
+	}
+
+	b := bytes.NewBuffer([]byte{})
+	headerSize := -1
+	if err := cw.origResW.Header().Write(b); err != nil {
+		log.From(ctx).Error("speakeasy-sdk: failed to read length of response headers", zap.Error(err))
+	} else {
+		headerSize = b.Len()
 	}
 
 	return &har.Response{
-		Status:      int64(swr.status),
-		StatusText:  http.StatusText(swr.status),
+		Status:      int64(cw.status),
+		StatusText:  http.StatusText(cw.status),
 		HTTPVersion: r.Proto,
 		Headers:     resHeaders,
 		Cookies:     resCookies,
 		Content: &har.Content{ // we are assuming we are getting the raw response here, so if we are put in the chain such that compression or encoding happens then the response text will be unreadable
-			Size:     int64(swr.body.Len()),
+			Size:     int64(contentBodySize),
 			MimeType: resContentType,
-			Text:     swr.body.String(),
+			Text:     bodyText,
 		},
-		RedirectURL: swr.Header().Get("Location"),
-		HeadersSize: -1,
-		BodySize:    resBodySize,
+		RedirectURL: cw.origResW.Header().Get("Location"),
+		HeadersSize: int64(headerSize),
+		BodySize:    int64(bodySize),
 	}
 }
 

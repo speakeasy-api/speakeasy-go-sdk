@@ -1,0 +1,22 @@
+{
+    "name": "captures basic request and response with different content types",
+    "fields": {
+        "max_capture_size": 9437184
+    },
+    "args": {
+        "method": "GET",
+        "url": "http://test.com/test",
+        "headers": {
+            "Content-Type": [
+                "application/json"
+            ]
+        },
+        "response_status": -1,
+        "response_body": "dGVzdA==",
+        "response_headers": {
+            "Content-Type": [
+                "text/plain; charset=utf-8"
+            ]
+        }
+    }
+}

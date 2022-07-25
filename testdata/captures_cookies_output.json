@@ -1,0 +1,71 @@
+{
+    "log": {
+        "version": "1.2",
+        "creator": {
+            "name": "speakeasy-go-sdk",
+            "version": "0.0.2"
+        },
+        "entries": [
+            {
+                "startedDateTime": "2020-01-01T00:00:00Z",
+                "time": 1,
+                "request": {
+                    "method": "GET",
+                    "url": "http://test.com/test",
+                    "httpVersion": "HTTP/1.1",
+                    "cookies": [
+                        {
+                            "name": "cookie1",
+                            "value": "value1",
+                            "expires": "0001-01-01T00:00:00Z"
+                        },
+                        {
+                            "name": "cookie2",
+                            "value": "value2",
+                            "expires": "0001-01-01T00:00:00Z"
+                        }
+                    ],
+                    "headers": [],
+                    "queryString": [],
+                    "postData": {
+                        "mimeType": "application/octet-stream",
+                        "params": null,
+                        "text": ""
+                    },
+                    "headersSize": 40,
+                    "bodySize": 0
+                },
+                "response": {
+                    "status": 200,
+                    "statusText": "OK",
+                    "httpVersion": "HTTP/1.1",
+                    "cookies": [
+                        {
+                            "name": "cookie1",
+                            "value": "value1",
+                            "expires": "0001-01-01T00:00:00Z"
+                        },
+                        {
+                            "name": "cookie2",
+                            "value": "value2",
+                            "expires": "0001-01-01T00:00:00Z"
+                        }
+                    ],
+                    "headers": [],
+                    "content": {
+                        "size": 4,
+                        "mimeType": "application/octet-stream",
+                        "text": "test"
+                    },
+                    "redirectURL": "",
+                    "headersSize": 44,
+                    "bodySize": 4
+                },
+                "cache": null,
+                "timings": null,
+                "serverIPAddress": "test.com"
+            }
+        ],
+        "comment": "request capture for http://test.com/test"
+    }
+}

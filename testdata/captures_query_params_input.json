@@ -1,0 +1,12 @@
+{
+    "name": "captures query params",
+    "fields": {
+        "max_capture_size": 9437184
+    },
+    "args": {
+        "method": "GET",
+        "url": "http://test.com/test?param1=value1",
+        "response_status": 200,
+        "response_body": "dGVzdA=="
+    }
+}

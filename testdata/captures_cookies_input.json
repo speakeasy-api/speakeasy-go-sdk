@@ -1,0 +1,22 @@
+{
+    "name": "captures cookies",
+    "fields": {
+        "max_capture_size": 9437184
+    },
+    "args": {
+        "method": "GET",
+        "url": "http://test.com/test",
+        "headers": {
+            "Cookie": [
+                "cookie1=value1; cookie2=value2"
+            ]
+        },
+        "response_status": 200,
+        "response_body": "dGVzdA==",
+        "response_headers": {
+            "Set-Cookie": [
+                "cookie1=value1; cookie2=value2"
+            ]
+        }
+    }
+}
