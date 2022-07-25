@@ -145,6 +145,7 @@ func (s *speakeasy) buildHarFile(ctx context.Context, cw *captureWriter, r *http
 	}
 }
 
+// nolint:cyclop
 func (s *speakeasy) getHarRequest(ctx context.Context, cw *captureWriter, r *http.Request) *har.Request {
 	reqHeaders := []*har.NameValuePair{}
 	for k, v := range r.Header {
@@ -163,19 +164,7 @@ func (s *speakeasy) getHarRequest(ctx context.Context, cw *captureWriter, r *htt
 		}
 	}
 
-	reqCookies := []*har.Cookie{}
-
-	for _, cookie := range r.Cookies() {
-		reqCookies = append(reqCookies, &har.Cookie{
-			Name:     cookie.Name,
-			Value:    cookie.Value,
-			Path:     cookie.Path,
-			Domain:   cookie.Domain,
-			Expires:  cookie.Expires.Format(time.RFC3339),
-			Secure:   cookie.Secure,
-			HTTPOnly: cookie.HttpOnly,
-		})
-	}
+	reqCookies := getHarCookies(r.Cookies())
 
 	reqContentType := r.Header.Get("Content-Type")
 	if reqContentType == "" {
@@ -236,18 +225,7 @@ func (s *speakeasy) getHarResponse(ctx context.Context, cw *captureWriter, r *ht
 		}
 	}
 
-	resCookies := []*har.Cookie{}
-	for _, cookie := range cookieParser.Cookies() {
-		resCookies = append(resCookies, &har.Cookie{
-			Name:     cookie.Name,
-			Value:    cookie.Value,
-			Path:     cookie.Path,
-			Domain:   cookie.Domain,
-			Expires:  cookie.Expires.Format(time.RFC3339),
-			Secure:   cookie.Secure,
-			HTTPOnly: cookie.HttpOnly,
-		})
-	}
+	resCookies := getHarCookies(cookieParser.Cookies())
 
 	resContentType := cw.origResW.Header().Get("Content-Type")
 	if resContentType == "" {
@@ -289,6 +267,23 @@ func (s *speakeasy) getHarResponse(ctx context.Context, cw *captureWriter, r *ht
 		HeadersSize: int64(headerSize),
 		BodySize:    int64(bodySize),
 	}
+}
+
+func getHarCookies(cookies []*http.Cookie) []*har.Cookie {
+	harCookies := []*har.Cookie{}
+	for _, cookie := range cookies {
+		harCookies = append(harCookies, &har.Cookie{
+			Name:     cookie.Name,
+			Value:    cookie.Value,
+			Path:     cookie.Path,
+			Domain:   cookie.Domain,
+			Expires:  cookie.Expires.Format(time.RFC3339),
+			Secure:   cookie.Secure,
+			HTTPOnly: cookie.HttpOnly,
+		})
+	}
+
+	return harCookies
 }
 
 // This allows us to not be affected by context cancellation of the request that spawned our request capture while still retaining any context values.
