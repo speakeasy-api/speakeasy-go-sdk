@@ -11,9 +11,9 @@
                 "application/json"
             ]
         },
-        "body": "e3Rlc3Q6ICJ0ZXN0In0=",
+        "body": "{test: \"test\"}",
         "response_status": -1,
-        "response_body": "dGVzdA==",
+        "response_body": "test",
         "response_headers": {
             "Content-Type": [
                 "text/plain; charset=utf-8"

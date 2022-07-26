@@ -11,9 +11,9 @@
                 "application/json"
             ]
         },
-        "body": "eyJ0b29MYXJnZSI6ICJ2ZXJ5TGFyZ2UifQ==",
+        "body": "{\"tooLarge\": \"veryLarge\"}",
         "response_status": 200,
-        "response_body": "bm8gcm9vbSBsZWZ0IGZvciByZXNwb25zZSB0byBiZSBjYXB0dXJlZA==",
+        "response_body": "no room left for response to be captured",
         "response_headers": {
             "Content-Type": [
                 "text/plain; charset=utf-8"

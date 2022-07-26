@@ -11,9 +11,9 @@
                 "application/json"
             ]
         },
-        "body": "eyJhIjogImIifQ==",
+        "body": "{\"a\": \"b\"}",
         "response_status": 200,
-        "response_body": "cmVzcG9uc2UgaXMgd2F5IHRvbyBsYXJnZSB0byBiZSBjYXB0dXJlZA==",
+        "response_body": "response is way too large to be captured",
         "response_headers": {
             "Content-Type": [
                 "text/plain; charset=utf-8"

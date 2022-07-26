@@ -30,6 +30,8 @@ import (
 func TestMain(m *testing.M) {
 	// nolint:tenv,nolintlint
 	os.Setenv("SPEAKEASY_SERVER_SECURE", "false")
+	gin.SetMode(gin.ReleaseMode)
+	os.Exit(m.Run())
 }
 
 type fields struct {
@@ -39,9 +41,9 @@ type args struct {
 	Method          string              `json:"method"`
 	URL             string              `json:"url"`
 	Headers         map[string][]string `json:"headers,omitempty"`
-	Body            []byte              `json:"body,omitempty"`
+	Body            string              `json:"body,omitempty"`
 	ResponseStatus  int                 `json:"response_status,omitempty"`
-	ResponseBody    []byte              `json:"response_body,omitempty"`
+	ResponseBody    string              `json:"response_body,omitempty"`
 	ResponseHeaders map[string][]string `json:"response_headers,omitempty"`
 }
 type test struct {
@@ -116,15 +118,15 @@ func TestSpeakeasy_Middleware_Capture_Success(t *testing.T) {
 				if req.Body != nil {
 					data, err := ioutil.ReadAll(req.Body)
 					assert.NoError(t, err)
-					assert.Equal(t, string(tt.Args.Body), string(data))
+					assert.Equal(t, tt.Args.Body, string(data))
 				}
 
 				if tt.Args.ResponseStatus > 0 {
 					w.WriteHeader(tt.Args.ResponseStatus)
 				}
 
-				if tt.Args.ResponseBody != nil {
-					_, err := w.Write(tt.Args.ResponseBody)
+				if tt.Args.ResponseBody != "" {
+					_, err := w.Write([]byte(tt.Args.ResponseBody))
 					assert.NoError(t, err)
 				}
 				handled = true
@@ -134,10 +136,10 @@ func TestSpeakeasy_Middleware_Capture_Success(t *testing.T) {
 
 			var req *http.Request
 			var err error
-			if tt.Args.Body == nil {
+			if tt.Args.Body == "" {
 				req, err = http.NewRequest(tt.Args.Method, tt.Args.URL, nil)
 			} else {
-				req, err = http.NewRequest(tt.Args.Method, tt.Args.URL, bytes.NewBuffer(tt.Args.Body))
+				req, err = http.NewRequest(tt.Args.Method, tt.Args.URL, bytes.NewBuffer([]byte(tt.Args.Body)))
 			}
 			assert.NoError(t, err)
 
@@ -379,6 +381,8 @@ func TestSpeakeasy_GinMiddleware_Success(t *testing.T) {
 	tests := loadTestData(t)
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
+			speakeasy.ExportSetMaxCaptureSize(tt.Fields.MaxCaptureSize)
+
 			captured := false
 			handled := false
 
@@ -398,7 +402,12 @@ func TestSpeakeasy_GinMiddleware_Success(t *testing.T) {
 			r.Use(sdkInstance.GinMiddleware)
 
 			r.Any("/*path", func(ctx *gin.Context) {
+				contentHeader := false
 				for k, v := range tt.Args.ResponseHeaders {
+					if k == "Content-Type" {
+						contentHeader = true
+					}
+
 					for _, vv := range v {
 						ctx.Writer.Header().Add(k, vv)
 					}
@@ -407,16 +416,22 @@ func TestSpeakeasy_GinMiddleware_Success(t *testing.T) {
 				if ctx.Request.Body != nil {
 					data, err := ioutil.ReadAll(ctx.Request.Body)
 					assert.NoError(t, err)
-					assert.Equal(t, string(tt.Args.Body), string(data))
+					assert.Equal(t, tt.Args.Body, string(data))
 				}
 
 				if tt.Args.ResponseStatus > 0 {
 					ctx.Writer.WriteHeader(tt.Args.ResponseStatus)
 				}
 
-				if tt.Args.ResponseBody != nil {
-					_, err := ctx.Writer.Write(tt.Args.ResponseBody)
+				if tt.Args.ResponseBody != "" {
+					_, err := ctx.Writer.Write([]byte(tt.Args.ResponseBody))
 					assert.NoError(t, err)
+
+					// A bit of a hack for now to ensure the Gin framework outputs the same as the native http.ResponseWriter
+					// this is probably not too much of an issue as its quite an edge case
+					if !contentHeader && tt.Args.ResponseStatus <= 0 {
+						ctx.Writer.Header().Add("Content-Type", http.DetectContentType([]byte(tt.Args.ResponseBody)))
+					}
 				}
 				handled = true
 			})
@@ -425,10 +440,10 @@ func TestSpeakeasy_GinMiddleware_Success(t *testing.T) {
 
 			var req *http.Request
 			var err error
-			if tt.Args.Body == nil {
+			if tt.Args.Body == "" {
 				req, err = http.NewRequest(tt.Args.Method, tt.Args.URL, nil)
 			} else {
-				req, err = http.NewRequest(tt.Args.Method, tt.Args.URL, bytes.NewBuffer(tt.Args.Body))
+				req, err = http.NewRequest(tt.Args.Method, tt.Args.URL, bytes.NewBuffer([]byte(tt.Args.Body)))
 			}
 			assert.NoError(t, err)
 
@@ -543,6 +558,8 @@ func TestSpeakeasy_EchoMiddleware_Success(t *testing.T) {
 	tests := loadTestData(t)
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
+			speakeasy.ExportSetMaxCaptureSize(tt.Fields.MaxCaptureSize)
+
 			captured := false
 			handled := false
 
@@ -562,7 +579,12 @@ func TestSpeakeasy_EchoMiddleware_Success(t *testing.T) {
 			r.Use(sdkInstance.EchoMiddleware)
 
 			r.Any("/*", func(c echo.Context) error {
+				contentHeader := false
 				for k, v := range tt.Args.ResponseHeaders {
+					if k == "Content-Type" {
+						contentHeader = true
+					}
+
 					for _, vv := range v {
 						c.Response().Header().Add(k, vv)
 					}
@@ -571,16 +593,24 @@ func TestSpeakeasy_EchoMiddleware_Success(t *testing.T) {
 				if c.Request().Body != nil {
 					data, err := ioutil.ReadAll(c.Request().Body)
 					assert.NoError(t, err)
-					assert.Equal(t, string(tt.Args.Body), string(data))
+					assert.Equal(t, tt.Args.Body, string(data))
 				}
 
 				if tt.Args.ResponseStatus > 0 {
 					c.Response().WriteHeader(tt.Args.ResponseStatus)
 				}
 
-				if tt.Args.ResponseBody != nil {
-					_, err := c.Response().Write(tt.Args.ResponseBody)
+				if tt.Args.ResponseBody != "" {
+					_, err := c.Response().Write([]byte(tt.Args.ResponseBody))
 					assert.NoError(t, err)
+
+					// Seems both Gin and Echo override the default http.ResponseWriters behaviour and don't write a
+					// Content-Type header if no headers are set when a write occurs. This may be better handle by making
+					// our own writer mimic Gin and Echo and bringing all tests in to line? This may be answered by the
+					// behaviour of other language SDKs.
+					if !contentHeader && tt.Args.ResponseStatus <= 0 {
+						c.Response().Header().Add("Content-Type", http.DetectContentType([]byte(tt.Args.ResponseBody)))
+					}
 				}
 				handled = true
 
@@ -591,10 +621,10 @@ func TestSpeakeasy_EchoMiddleware_Success(t *testing.T) {
 
 			var req *http.Request
 			var err error
-			if tt.Args.Body == nil {
+			if tt.Args.Body == "" {
 				req, err = http.NewRequest(tt.Args.Method, tt.Args.URL, nil)
 			} else {
-				req, err = http.NewRequest(tt.Args.Method, tt.Args.URL, bytes.NewBuffer(tt.Args.Body))
+				req, err = http.NewRequest(tt.Args.Method, tt.Args.URL, bytes.NewBuffer([]byte(tt.Args.Body)))
 			}
 			assert.NoError(t, err)
 

@@ -7,6 +7,6 @@
         "method": "GET",
         "url": "http://test.com/test?param1=value1",
         "response_status": 200,
-        "response_body": "dGVzdA=="
+        "response_body": "test"
     }
 }

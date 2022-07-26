@@ -12,7 +12,7 @@
             ]
         },
         "response_status": 200,
-        "response_body": "dGVzdA==",
+        "response_body": "test",
         "response_headers": {
             "Set-Cookie": [
                 "cookie1=value1; cookie2=value2"
