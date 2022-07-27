@@ -5,6 +5,6 @@
     },
     "args": {
         "method": "GET",
-        "url": "http://test.com/test"
+        "url": "http://test.com:8080/test"
     }
 }

@@ -7,17 +7,13 @@
         "method": "POST",
         "url": "http://test.com/test",
         "headers": {
-            "Content-Type": [
-                "application/json"
-            ]
+            "Content-Type": ["application/json"]
         },
         "body": "{\"tooLarge\": \"veryLarge\"}",
         "response_status": 200,
         "response_body": "no room left for response to be captured",
         "response_headers": {
-            "Content-Type": [
-                "text/plain; charset=utf-8"
-            ]
+            "Content-Type": ["text/plain; charset=utf-8"]
         }
     }
 }

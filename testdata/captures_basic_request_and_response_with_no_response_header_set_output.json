@@ -16,11 +16,6 @@
                     "cookies": [],
                     "headers": [],
                     "queryString": [],
-                    "postData": {
-                        "mimeType": "application/octet-stream",
-                        "params": null,
-                        "text": ""
-                    },
                     "headersSize": 0,
                     "bodySize": 0
                 },
@@ -29,19 +24,14 @@
                     "statusText": "OK",
                     "httpVersion": "HTTP/1.1",
                     "cookies": [],
-                    "headers": [
-                        {
-                            "name": "Content-Type",
-                            "value": "text/plain; charset=utf-8"
-                        }
-                    ],
+                    "headers": [],
                     "content": {
                         "size": 4,
-                        "mimeType": "text/plain; charset=utf-8",
+                        "mimeType": "application/octet-stream",
                         "text": "test"
                     },
                     "redirectURL": "",
-                    "headersSize": 41,
+                    "headersSize": 0,
                     "bodySize": 4
                 },
                 "cache": null,

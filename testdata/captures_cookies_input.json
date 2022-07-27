@@ -7,15 +7,20 @@
         "method": "GET",
         "url": "http://test.com/test",
         "headers": {
-            "Cookie": [
-                "cookie1=value1; cookie2=value2"
-            ]
+            "Cookie": ["cookie1=value1; cookie2=value2"]
         },
         "response_status": 200,
         "response_body": "test",
         "response_headers": {
             "Set-Cookie": [
-                "cookie1=value1; cookie2=value2"
+                "cookie1=value1",
+                "cookie2=value2; Max-Age=3600",
+                "cookie3=value3; Expires=Wed, 21 Oct 2015 07:28:00 GMT",
+                "cookie4=value4; Domain=test.com",
+                "cookie5=value5; Path=/test",
+                "cookie6=value6; Secure",
+                "cookie7=value7; HttpOnly",
+                "cookie8=value8; Max-Age=3600; Domain=test.com; Path=/test; Secure; HttpOnly"
             ]
         }
     }

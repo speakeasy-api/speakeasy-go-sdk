@@ -97,7 +97,7 @@ func TestSpeakeasy_Middleware_Capture_Success(t *testing.T) {
 			handled := false
 
 			speakeasy.ExportSetTimeNow(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC))
-			speakeasy.ExportSetTimeSince(1 * time.Second)
+			speakeasy.ExportSetTimeSince(1 * time.Millisecond)
 
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
@@ -209,7 +209,7 @@ func TestSpeakeasy_Middleware_GorillaMux_PathHint_Success(t *testing.T) {
 			handled := false
 
 			speakeasy.ExportSetTimeNow(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC))
-			speakeasy.ExportSetTimeSince(1 * time.Second)
+			speakeasy.ExportSetTimeSince(1 * time.Millisecond)
 
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
@@ -283,7 +283,7 @@ func TestSpeakeasy_Middleware_Chi_PathHint_Success(t *testing.T) {
 			handled := false
 
 			speakeasy.ExportSetTimeNow(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC))
-			speakeasy.ExportSetTimeSince(1 * time.Second)
+			speakeasy.ExportSetTimeSince(1 * time.Millisecond)
 
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
@@ -343,7 +343,7 @@ func TestSpeakeasy_Middleware_ServerMux_PathHint_Success(t *testing.T) {
 			handled := false
 
 			speakeasy.ExportSetTimeNow(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC))
-			speakeasy.ExportSetTimeSince(1 * time.Second)
+			speakeasy.ExportSetTimeSince(1 * time.Millisecond)
 
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
@@ -387,7 +387,7 @@ func TestSpeakeasy_GinMiddleware_Success(t *testing.T) {
 			handled := false
 
 			speakeasy.ExportSetTimeNow(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC))
-			speakeasy.ExportSetTimeSince(1 * time.Second)
+			speakeasy.ExportSetTimeSince(1 * time.Millisecond)
 
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
@@ -402,12 +402,7 @@ func TestSpeakeasy_GinMiddleware_Success(t *testing.T) {
 			r.Use(sdkInstance.GinMiddleware)
 
 			r.Any("/*path", func(ctx *gin.Context) {
-				contentHeader := false
 				for k, v := range tt.Args.ResponseHeaders {
-					if k == "Content-Type" {
-						contentHeader = true
-					}
-
 					for _, vv := range v {
 						ctx.Writer.Header().Add(k, vv)
 					}
@@ -426,12 +421,6 @@ func TestSpeakeasy_GinMiddleware_Success(t *testing.T) {
 				if tt.Args.ResponseBody != "" {
 					_, err := ctx.Writer.Write([]byte(tt.Args.ResponseBody))
 					assert.NoError(t, err)
-
-					// A bit of a hack for now to ensure the Gin framework outputs the same as the native http.ResponseWriter
-					// this is probably not too much of an issue as its quite an edge case
-					if !contentHeader && tt.Args.ResponseStatus <= 0 {
-						ctx.Writer.Header().Add("Content-Type", http.DetectContentType([]byte(tt.Args.ResponseBody)))
-					}
 				}
 				handled = true
 			})
@@ -513,7 +502,7 @@ func TestSpeakeasy_GinMiddleware_PathHint_Success(t *testing.T) {
 			handled := false
 
 			speakeasy.ExportSetTimeNow(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC))
-			speakeasy.ExportSetTimeSince(1 * time.Second)
+			speakeasy.ExportSetTimeSince(1 * time.Millisecond)
 
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
@@ -564,7 +553,7 @@ func TestSpeakeasy_EchoMiddleware_Success(t *testing.T) {
 			handled := false
 
 			speakeasy.ExportSetTimeNow(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC))
-			speakeasy.ExportSetTimeSince(1 * time.Second)
+			speakeasy.ExportSetTimeSince(1 * time.Millisecond)
 
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
@@ -579,12 +568,7 @@ func TestSpeakeasy_EchoMiddleware_Success(t *testing.T) {
 			r.Use(sdkInstance.EchoMiddleware)
 
 			r.Any("/*", func(c echo.Context) error {
-				contentHeader := false
 				for k, v := range tt.Args.ResponseHeaders {
-					if k == "Content-Type" {
-						contentHeader = true
-					}
-
 					for _, vv := range v {
 						c.Response().Header().Add(k, vv)
 					}
@@ -603,14 +587,6 @@ func TestSpeakeasy_EchoMiddleware_Success(t *testing.T) {
 				if tt.Args.ResponseBody != "" {
 					_, err := c.Response().Write([]byte(tt.Args.ResponseBody))
 					assert.NoError(t, err)
-
-					// Seems both Gin and Echo override the default http.ResponseWriters behaviour and don't write a
-					// Content-Type header if no headers are set when a write occurs. This may be better handle by making
-					// our own writer mimic Gin and Echo and bringing all tests in to line? This may be answered by the
-					// behaviour of other language SDKs.
-					if !contentHeader && tt.Args.ResponseStatus <= 0 {
-						c.Response().Header().Add("Content-Type", http.DetectContentType([]byte(tt.Args.ResponseBody)))
-					}
 				}
 				handled = true
 
@@ -694,7 +670,7 @@ func TestSpeakeasy_EchoMiddleware_PathHint_Success(t *testing.T) {
 			handled := false
 
 			speakeasy.ExportSetTimeNow(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC))
-			speakeasy.ExportSetTimeSince(1 * time.Second)
+			speakeasy.ExportSetTimeSince(1 * time.Millisecond)
 
 			wg := &sync.WaitGroup{}
 			wg.Add(1)

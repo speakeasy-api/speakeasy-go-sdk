@@ -134,9 +134,9 @@ func (s *speakeasy) buildHarFile(ctx context.Context, cw *captureWriter, r *http
 			Entries: []*har.Entry{
 				{
 					StartedDateTime: startTime.Format(time.RFC3339),
-					Time:            timeSince(startTime).Seconds(),
+					Time:            float64(timeSince(startTime).Milliseconds()),
 					Request:         s.getHarRequest(ctx, cw, r),
-					Response:        s.getHarResponse(ctx, cw, r),
+					Response:        s.getHarResponse(ctx, cw, r, startTime),
 					Connection:      r.URL.Port(),
 					ServerIPAddress: r.URL.Hostname(),
 				},
@@ -149,10 +149,8 @@ func (s *speakeasy) buildHarFile(ctx context.Context, cw *captureWriter, r *http
 func (s *speakeasy) getHarRequest(ctx context.Context, cw *captureWriter, r *http.Request) *har.Request {
 	reqHeaders := []*har.NameValuePair{}
 	for k, v := range r.Header {
-		if k != "Cookie" {
-			for _, vv := range v {
-				reqHeaders = append(reqHeaders, &har.NameValuePair{Name: k, Value: vv})
-			}
+		for _, vv := range v {
+			reqHeaders = append(reqHeaders, &har.NameValuePair{Name: k, Value: vv})
 		}
 	}
 
@@ -164,13 +162,7 @@ func (s *speakeasy) getHarRequest(ctx context.Context, cw *captureWriter, r *htt
 		}
 	}
 
-	reqCookies := getHarCookies(r.Cookies())
-
-	reqContentType := r.Header.Get("Content-Type")
-	if reqContentType == "" {
-		reqContentType = "application/octet-stream" // default http content type
-	}
-
+	reqCookies := getHarCookies(r.Cookies(), time.Time{})
 	bodyText := "--dropped--"
 	if cw.IsReqValid() {
 		bodyText = cw.GetReqBuffer().String()
@@ -192,40 +184,52 @@ func (s *speakeasy) getHarRequest(ctx context.Context, cw *captureWriter, r *htt
 		headerSize = b.Len()
 	}
 
+	var postData *har.PostData
+	if len(bodyText) > 0 {
+		reqContentType := r.Header.Get("Content-Type")
+		if reqContentType == "" {
+			reqContentType = http.DetectContentType(cw.GetReqBuffer().Bytes())
+			if reqContentType == "" {
+				reqContentType = "application/octet-stream" // default http content type
+			}
+		}
+
+		postData = &har.PostData{
+			MimeType: reqContentType,
+			Text:     bodyText,
+			Params:   []*har.Param{}, // We don't parse the body here to populate this
+		}
+	}
+
 	return &har.Request{
 		Method:      r.Method,
 		URL:         r.URL.String(),
 		Headers:     reqHeaders,
 		QueryString: reqQueryParams,
 		BodySize:    r.ContentLength,
-		PostData: &har.PostData{
-			MimeType: reqContentType,
-			Text:     bodyText,
-			Params:   nil, // We don't parse the body here to populate this
-		},
+		PostData:    postData,
 		HTTPVersion: r.Proto,
 		Cookies:     reqCookies,
 		HeadersSize: int64(headerSize),
 	}
 }
 
-func (s *speakeasy) getHarResponse(ctx context.Context, cw *captureWriter, r *http.Request) *har.Response {
+func (s *speakeasy) getHarResponse(ctx context.Context, cw *captureWriter, r *http.Request, startTime time.Time) *har.Response {
 	resHeaders := []*har.NameValuePair{}
-	cookieParser := http.Request{
-		Header: http.Header{},
-	}
+
+	cookieParser := http.Response{Header: http.Header{}}
 
 	for k, v := range cw.origResW.Header() {
 		for _, vv := range v {
 			if k == "Set-Cookie" {
-				cookieParser.Header.Add("Cookie", vv)
-			} else {
-				resHeaders = append(resHeaders, &har.NameValuePair{Name: k, Value: vv})
+				cookieParser.Header.Add(k, vv)
 			}
+
+			resHeaders = append(resHeaders, &har.NameValuePair{Name: k, Value: vv})
 		}
 	}
 
-	resCookies := getHarCookies(cookieParser.Cookies())
+	resCookies := getHarCookies(cookieParser.Cookies(), startTime)
 
 	resContentType := cw.origResW.Header().Get("Content-Type")
 	if resContentType == "" {
@@ -269,18 +273,25 @@ func (s *speakeasy) getHarResponse(ctx context.Context, cw *captureWriter, r *ht
 	}
 }
 
-func getHarCookies(cookies []*http.Cookie) []*har.Cookie {
+func getHarCookies(cookies []*http.Cookie, startTime time.Time) []*har.Cookie {
 	harCookies := []*har.Cookie{}
 	for _, cookie := range cookies {
-		harCookies = append(harCookies, &har.Cookie{
+		harCookie := &har.Cookie{
 			Name:     cookie.Name,
 			Value:    cookie.Value,
 			Path:     cookie.Path,
 			Domain:   cookie.Domain,
-			Expires:  cookie.Expires.Format(time.RFC3339),
 			Secure:   cookie.Secure,
 			HTTPOnly: cookie.HttpOnly,
-		})
+		}
+
+		if cookie.MaxAge != 0 {
+			harCookie.Expires = startTime.Add(time.Duration(cookie.MaxAge) * time.Second).Format(time.RFC3339)
+		} else if (cookie.Expires != time.Time{}) {
+			harCookie.Expires = cookie.Expires.Format(time.RFC3339)
+		}
+
+		harCookies = append(harCookies, harCookie)
 	}
 
 	return harCookies

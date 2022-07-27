@@ -23,7 +23,7 @@
                     "queryString": [],
                     "postData": {
                         "mimeType": "application/json",
-                        "params": null,
+                        "params": [],
                         "text": "{\"a\": \"b\"}"
                     },
                     "headersSize": 32,

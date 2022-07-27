@@ -7,16 +7,12 @@
         "method": "GET",
         "url": "http://test.com/test",
         "headers": {
-            "Content-Type": [
-                "application/json"
-            ]
+            "Content-Type": ["application/json"]
         },
         "response_status": -1,
         "response_body": "test",
         "response_headers": {
-            "Content-Type": [
-                "text/plain; charset=utf-8"
-            ]
+            "Content-Type": ["text/plain; charset=utf-8"]
         }
     }
 }

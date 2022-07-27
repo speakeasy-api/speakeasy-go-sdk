@@ -9,9 +9,7 @@
         "response_status": 200,
         "response_body": "test",
         "response_headers": {
-            "Location": [
-                "http://test.com/test2"
-            ]
+            "Location": ["http://test.com/test2"]
         }
     }
 }

@@ -16,11 +16,6 @@
                     "cookies": [],
                     "headers": [],
                     "queryString": [],
-                    "postData": {
-                        "mimeType": "application/octet-stream",
-                        "params": null,
-                        "text": ""
-                    },
                     "headersSize": 0,
                     "bodySize": 0
                 },

@@ -11,16 +11,11 @@
                 "time": 1,
                 "request": {
                     "method": "GET",
-                    "url": "http://test.com/test",
+                    "url": "http://test.com:8080/test",
                     "httpVersion": "HTTP/1.1",
                     "cookies": [],
                     "headers": [],
                     "queryString": [],
-                    "postData": {
-                        "mimeType": "application/octet-stream",
-                        "params": null,
-                        "text": ""
-                    },
                     "headersSize": 0,
                     "bodySize": 0
                 },
@@ -40,9 +35,10 @@
                 },
                 "cache": null,
                 "timings": null,
-                "serverIPAddress": "test.com"
+                "serverIPAddress": "test.com",
+                "connection": "8080"
             }
         ],
-        "comment": "request capture for http://test.com/test"
+        "comment": "request capture for http://test.com:8080/test"
     }
 }

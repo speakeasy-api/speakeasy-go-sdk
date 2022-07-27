@@ -87,6 +87,10 @@ func (c *captureWriter) writeReq(p []byte) (int, error) {
 }
 
 func (c *captureWriter) writeRes(p []byte) (int, error) {
+	if c.resBuf.Len() == 0 {
+		c.writeHeader(c.status)
+	}
+
 	// Check if we have exceeded the buffer size and if so drop rest of response
 	if (c.reqBuf.Len() + c.resBuf.Len() + len(p)) > c.maxBuffer {
 		c.resValid = false

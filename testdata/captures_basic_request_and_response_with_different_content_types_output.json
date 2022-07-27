@@ -21,11 +21,6 @@
                         }
                     ],
                     "queryString": [],
-                    "postData": {
-                        "mimeType": "application/json",
-                        "params": null,
-                        "text": ""
-                    },
                     "headersSize": 32,
                     "bodySize": 0
                 },
