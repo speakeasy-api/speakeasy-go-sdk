@@ -8,11 +8,9 @@ require (
 )
 
 require (
-	github.com/ettle/strcase v0.1.1 // indirect
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-chi/chi/v5 v5.0.7
 	github.com/gorilla/mux v1.8.0
-	github.com/iancoleman/strcase v0.2.0 // indirect
 	github.com/labstack/echo/v4 v4.7.2
 	github.com/speakeasy-api/speakeasy-schemas v0.0.0-20220719204502-25c50437b6b2
 	go.uber.org/zap v1.21.0

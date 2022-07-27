@@ -145,7 +145,7 @@ func (s *speakeasy) buildHarFile(ctx context.Context, cw *captureWriter, r *http
 	}
 }
 
-// nolint:cyclop
+// nolint:cyclop,funlen
 func (s *speakeasy) getHarRequest(ctx context.Context, cw *captureWriter, r *http.Request) *har.Request {
 	reqHeaders := []*har.NameValuePair{}
 	for k, v := range r.Header {
