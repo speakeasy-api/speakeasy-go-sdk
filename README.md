@@ -28,18 +28,26 @@ go get github.com/speakeasy-api/speakeasy-go-sdk
 ```
 
 ## Minimum configuration
-Configure Speakeasy at the start of your `main()` function with just 2 lines of code: 
+
+[Sign up for free on our platform](https://www.speakeasyapi.dev/). After you've created a workspace and generated an API key enable Speakeasy in your API as follows:
+
+Configure Speakeasy at the start of your `main()` function with just 2 lines of code:
 
 ```go
 import "github.com/speakeasy-api/speakeasy-go-sdk"
 
 func main() {
 	speakeasy.Configure(speakeasy.Configuration {
-		APIKey:     "YOUR API KEY HERE",     // retrieve from Speakeasy dev dashboard
+		APIKey:     "YOUR API KEY HERE",     // retrieve from Speakeasy API dashboard
 	})
-	// rest of your program.	
+	// rest of your program.
 }
 ```
+
+Build and deploy your app and that's it. Your API is being tracked in the Speakeasy workspace you just created
+and will be visible on the dashboard next time you log in. Visit our [docs site](https://docs.speakeasyapi.dev/) to
+learn more.
+
 
 ## Optional Arguments
 
