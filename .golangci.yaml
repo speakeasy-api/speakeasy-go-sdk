@@ -40,6 +40,7 @@ issues:
         - cyclop
         - noctx
         - nosnakecase
+        - maintidx
     - path: _exports_test\.go
       linters:
         - testpackage

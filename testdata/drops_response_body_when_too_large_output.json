@@ -1,0 +1,59 @@
+{
+    "log": {
+        "version": "1.2",
+        "creator": {
+            "name": "speakeasy-go-sdk",
+            "version": "0.0.2"
+        },
+        "entries": [
+            {
+                "startedDateTime": "2020-01-01T00:00:00Z",
+                "time": 1,
+                "request": {
+                    "method": "POST",
+                    "url": "http://test.com/test",
+                    "httpVersion": "HTTP/1.1",
+                    "cookies": [],
+                    "headers": [
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ],
+                    "queryString": [],
+                    "postData": {
+                        "mimeType": "application/json",
+                        "params": [],
+                        "text": "{\"a\": \"b\"}"
+                    },
+                    "headersSize": 32,
+                    "bodySize": 10
+                },
+                "response": {
+                    "status": 200,
+                    "statusText": "OK",
+                    "httpVersion": "HTTP/1.1",
+                    "cookies": [],
+                    "headers": [
+                        {
+                            "name": "Content-Type",
+                            "value": "text/plain; charset=utf-8"
+                        }
+                    ],
+                    "content": {
+                        "size": 0,
+                        "mimeType": "text/plain; charset=utf-8",
+                        "text": "--dropped--"
+                    },
+                    "redirectURL": "",
+                    "headersSize": 41,
+                    "bodySize": 40
+                },
+                "cache": null,
+                "timings": null,
+                "serverIPAddress": "test.com"
+            }
+        ],
+        "comment": "request capture for http://test.com/test"
+    }
+}

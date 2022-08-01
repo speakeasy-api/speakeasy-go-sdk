@@ -83,7 +83,7 @@ func (s *speakeasy) EchoMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 
 			return next(c)
 		}, func(r *http.Request) string {
-			return ""
+			return c.Path()
 		})
 	}
 }
