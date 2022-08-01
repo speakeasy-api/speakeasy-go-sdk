@@ -113,8 +113,8 @@ github.com/rogpeppe/fastuuid v1.2.0/go.mod h1:jVj6XXZzXRy/MSR5jhDC/2q6DgLz+nrA6L
 github.com/rogpeppe/go-internal v1.6.1/go.mod h1:xXDCJY+GAPziupqXw64V24skbSoqbTEfhy4qGm1nDQc=
 github.com/rogpeppe/go-internal v1.8.0 h1:FCbCCtXNOY3UtUuHUYaghJg4y7Fd14rXifAYUAtL9R8=
 github.com/rogpeppe/go-internal v1.8.0/go.mod h1:WmiCO8CzOY8rg0OYDC4/i/2WRWAB6poM+XZ2dLUbcbE=
-github.com/speakeasy-api/speakeasy-schemas v0.0.0-20220719204502-25c50437b6b2 h1:mUMgmeN39ENIb9FPetYSErfjOYU0YgkluTjtVFTxLEk=
-github.com/speakeasy-api/speakeasy-schemas v0.0.0-20220719204502-25c50437b6b2/go.mod h1:g0yz/bfH6EDcBmACdbqM7BQtTzUrBfhJoIgDb6AsKRQ=
+github.com/speakeasy-api/speakeasy-schemas v0.0.1 h1:CH20+3TLmP9Y+8YxmYoLfA5cbyVzpw15w+SefvfKHqw=
+github.com/speakeasy-api/speakeasy-schemas v0.0.1/go.mod h1:g0yz/bfH6EDcBmACdbqM7BQtTzUrBfhJoIgDb6AsKRQ=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.4.0/go.mod h1:YvHI0jy2hoMjB+UWwv71VJQ9isScKT/TqJzVSSt89Yw=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
