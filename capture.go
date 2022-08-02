@@ -13,6 +13,7 @@ import (
 
 	"github.com/chromedp/cdproto/har"
 	"github.com/speakeasy-api/speakeasy-go-sdk/internal/log"
+	"github.com/speakeasy-api/speakeasy-go-sdk/internal/pathhints"
 	"github.com/speakeasy-api/speakeasy-schemas/grpc/go/registry/ingest"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -21,7 +22,7 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-var maxCaptureSize = 9 * 1024 * 1024
+var maxCaptureSize = 1 * 1024 * 1024
 
 var timeNow = func() time.Time {
 	return time.Now()
@@ -62,6 +63,7 @@ func (s *speakeasy) handleRequestResponseError(w http.ResponseWriter, r *http.Re
 	err := next(cw.GetResponseWriter(), r)
 
 	pathHint := capturePathHint(r)
+	pathHint = pathhints.NormalizePathHint(pathHint)
 
 	// if developer has provided a path hint use it, otherwise use the pathHint from the request
 	if c.pathHint != "" {
@@ -113,8 +115,10 @@ func (s *speakeasy) captureRequestResponse(cw *captureWriter, r *http.Request, s
 	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("x-api-key", s.config.APIKey))
 
 	_, err = ingest.NewIngestServiceClient(conn).Ingest(ctx, &ingest.IngestRequest{
-		Har:      string(harData),
-		PathHint: pathHint,
+		Har:       string(harData),
+		PathHint:  pathHint,
+		ApiId:     s.config.ApiID,
+		VersionId: s.config.VersionID,
 	})
 	if err != nil {
 		log.From(ctx).Error("speakeasy-sdk: failed to send ingest request", zap.Error(err))

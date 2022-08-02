@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -24,10 +25,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/test/bufconn"
 )
 
 func TestMain(m *testing.M) {
+	rand.Seed(time.Now().UnixNano())
+
 	// nolint:tenv,nolintlint
 	os.Setenv("SPEAKEASY_SERVER_SECURE", "false")
 	gin.SetMode(gin.ReleaseMode)
@@ -52,6 +56,12 @@ type test struct {
 	Args    args   `json:"args"`
 	WantHAR string
 }
+
+const (
+	testAPIKey    = "test"
+	testApiID     = "testapi1"
+	testVersionID = "v1.0.0"
+)
 
 func loadTestData(t *testing.T) []test {
 	t.Helper()
@@ -102,11 +112,24 @@ func TestSpeakeasy_Middleware_Capture_Success(t *testing.T) {
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
 
-			sdkInstance := speakeasy.New(speakeasy.Config{APIKey: "test", GRPCDialer: dialer(func(ctx context.Context, req *ingest.IngestRequest) {
-				assert.Equal(t, tt.WantHAR, req.Har)
-				captured = true
-				wg.Done()
-			})})
+			sdkInstance := speakeasy.New(speakeasy.Config{
+				APIKey:    testAPIKey,
+				ApiID:     testApiID,
+				VersionID: testVersionID,
+				GRPCDialer: dialer(func(ctx context.Context, req *ingest.IngestRequest) {
+					md, ok := metadata.FromIncomingContext(ctx)
+					assert.True(t, ok)
+
+					apiKeys := md.Get("x-api-key")
+					assert.Contains(t, apiKeys, testAPIKey)
+
+					assert.Equal(t, testApiID, req.ApiId)
+					assert.Equal(t, testVersionID, req.VersionId)
+					assert.Equal(t, tt.WantHAR, req.Har)
+					captured = true
+					wg.Done()
+				}),
+			})
 
 			h := sdkInstance.Middleware(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 				for k, v := range tt.Args.ResponseHeaders {
@@ -191,7 +214,7 @@ func TestSpeakeasy_Middleware_GorillaMux_PathHint_Success(t *testing.T) {
 				path: "/user/{id:[0-9]+}/account/{accountID}",
 				url:  "http://test.com/user/1/account/abcdefg",
 			},
-			wantPathHint: "/user/{id:[0-9]+}/account/{accountID}",
+			wantPathHint: "/user/{id}/account/{accountID}",
 		},
 		{
 			name: "path hint is overridden by dev hint",
@@ -214,11 +237,16 @@ func TestSpeakeasy_Middleware_GorillaMux_PathHint_Success(t *testing.T) {
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
 
-			sdkInstance := speakeasy.New(speakeasy.Config{APIKey: "test", GRPCDialer: dialer(func(ctx context.Context, req *ingest.IngestRequest) {
-				assert.Equal(t, tt.wantPathHint, req.PathHint)
-				captured = true
-				wg.Done()
-			})})
+			sdkInstance := speakeasy.New(speakeasy.Config{
+				APIKey:    testAPIKey,
+				ApiID:     testApiID,
+				VersionID: testVersionID,
+				GRPCDialer: dialer(func(ctx context.Context, req *ingest.IngestRequest) {
+					assert.Equal(t, tt.wantPathHint, req.PathHint)
+					captured = true
+					wg.Done()
+				}),
+			})
 
 			r := mux.NewRouter()
 			r.Use(sdkInstance.Middleware)
@@ -269,12 +297,12 @@ func TestSpeakeasy_Middleware_Chi_PathHint_Success(t *testing.T) {
 			wantPathHint: "/user/{id}",
 		},
 		{
-			name: "captures simple path hint from chi",
+			name: "captures complex path hint from chi",
 			args: args{
-				path: "/user/{id}/account/{accountID:[0-9]+}",
+				path: "/user/{id}/account/*",
 				url:  "http://test.com/user/abcdefg/account/1",
 			},
-			wantPathHint: "/user/{id}/account/{accountID:[0-9]+}",
+			wantPathHint: "/user/{id}/account/{wildcard}",
 		},
 	}
 	for _, tt := range tests {
@@ -288,11 +316,16 @@ func TestSpeakeasy_Middleware_Chi_PathHint_Success(t *testing.T) {
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
 
-			sdkInstance := speakeasy.New(speakeasy.Config{APIKey: "test", GRPCDialer: dialer(func(ctx context.Context, req *ingest.IngestRequest) {
-				assert.Equal(t, tt.wantPathHint, req.PathHint)
-				captured = true
-				wg.Done()
-			})})
+			sdkInstance := speakeasy.New(speakeasy.Config{
+				APIKey:    testAPIKey,
+				ApiID:     testApiID,
+				VersionID: testVersionID,
+				GRPCDialer: dialer(func(ctx context.Context, req *ingest.IngestRequest) {
+					assert.Equal(t, tt.wantPathHint, req.PathHint)
+					captured = true
+					wg.Done()
+				}),
+			})
 
 			r := chi.NewRouter()
 			r.Use(sdkInstance.Middleware)
@@ -348,11 +381,16 @@ func TestSpeakeasy_Middleware_ServerMux_PathHint_Success(t *testing.T) {
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
 
-			sdkInstance := speakeasy.New(speakeasy.Config{APIKey: "test", GRPCDialer: dialer(func(ctx context.Context, req *ingest.IngestRequest) {
-				assert.Equal(t, tt.wantPathHint, req.PathHint)
-				captured = true
-				wg.Done()
-			})})
+			sdkInstance := speakeasy.New(speakeasy.Config{
+				APIKey:    testAPIKey,
+				ApiID:     testApiID,
+				VersionID: testVersionID,
+				GRPCDialer: dialer(func(ctx context.Context, req *ingest.IngestRequest) {
+					assert.Equal(t, tt.wantPathHint, req.PathHint)
+					captured = true
+					wg.Done()
+				}),
+			})
 
 			r := http.DefaultServeMux
 
@@ -392,11 +430,16 @@ func TestSpeakeasy_GinMiddleware_Success(t *testing.T) {
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
 
-			sdkInstance := speakeasy.New(speakeasy.Config{APIKey: "test", GRPCDialer: dialer(func(ctx context.Context, req *ingest.IngestRequest) {
-				assert.Equal(t, tt.WantHAR, req.Har)
-				captured = true
-				wg.Done()
-			})})
+			sdkInstance := speakeasy.New(speakeasy.Config{
+				APIKey:    testAPIKey,
+				ApiID:     testApiID,
+				VersionID: testVersionID,
+				GRPCDialer: dialer(func(ctx context.Context, req *ingest.IngestRequest) {
+					assert.Equal(t, tt.WantHAR, req.Har)
+					captured = true
+					wg.Done()
+				}),
+			})
 
 			r := gin.Default()
 			r.Use(sdkInstance.GinMiddleware)
@@ -484,7 +527,7 @@ func TestSpeakeasy_GinMiddleware_PathHint_Success(t *testing.T) {
 				path: "/user/:id/*action",
 				url:  "http://test.com/user/1/send",
 			},
-			wantPathHint: "/user/:id/*action",
+			wantPathHint: "/user/{id}/{action}",
 		},
 		{
 			name: "path hint is overridden by dev hint",
@@ -507,11 +550,16 @@ func TestSpeakeasy_GinMiddleware_PathHint_Success(t *testing.T) {
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
 
-			sdkInstance := speakeasy.New(speakeasy.Config{APIKey: "test", GRPCDialer: dialer(func(ctx context.Context, req *ingest.IngestRequest) {
-				assert.Equal(t, tt.wantPathHint, req.PathHint)
-				captured = true
-				wg.Done()
-			})})
+			sdkInstance := speakeasy.New(speakeasy.Config{
+				APIKey:    testAPIKey,
+				ApiID:     testApiID,
+				VersionID: testVersionID,
+				GRPCDialer: dialer(func(ctx context.Context, req *ingest.IngestRequest) {
+					assert.Equal(t, tt.wantPathHint, req.PathHint)
+					captured = true
+					wg.Done()
+				}),
+			})
 
 			r := gin.Default()
 			r.Use(sdkInstance.GinMiddleware)
@@ -558,11 +606,16 @@ func TestSpeakeasy_EchoMiddleware_Success(t *testing.T) {
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
 
-			sdkInstance := speakeasy.New(speakeasy.Config{APIKey: "test", GRPCDialer: dialer(func(ctx context.Context, req *ingest.IngestRequest) {
-				assert.Equal(t, tt.WantHAR, req.Har)
-				captured = true
-				wg.Done()
-			})})
+			sdkInstance := speakeasy.New(speakeasy.Config{
+				APIKey:    testAPIKey,
+				ApiID:     testApiID,
+				VersionID: testVersionID,
+				GRPCDialer: dialer(func(ctx context.Context, req *ingest.IngestRequest) {
+					assert.Equal(t, tt.WantHAR, req.Har)
+					captured = true
+					wg.Done()
+				}),
+			})
 
 			r := echo.New()
 			r.Use(sdkInstance.EchoMiddleware)
@@ -652,7 +705,7 @@ func TestSpeakeasy_EchoMiddleware_PathHint_Success(t *testing.T) {
 				path: "/user/:id/*",
 				url:  "http://test.com/user/1/send",
 			},
-			wantPathHint: "/user/:id/*",
+			wantPathHint: "/user/{id}/{wildcard}",
 		},
 		{
 			name: "path hint is overridden by dev hint",
@@ -675,11 +728,16 @@ func TestSpeakeasy_EchoMiddleware_PathHint_Success(t *testing.T) {
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
 
-			sdkInstance := speakeasy.New(speakeasy.Config{APIKey: "test", GRPCDialer: dialer(func(ctx context.Context, req *ingest.IngestRequest) {
-				assert.Equal(t, tt.wantPathHint, req.PathHint)
-				captured = true
-				wg.Done()
-			})})
+			sdkInstance := speakeasy.New(speakeasy.Config{
+				APIKey:    testAPIKey,
+				ApiID:     testApiID,
+				VersionID: testVersionID,
+				GRPCDialer: dialer(func(ctx context.Context, req *ingest.IngestRequest) {
+					assert.Equal(t, tt.wantPathHint, req.PathHint)
+					captured = true
+					wg.Done()
+				}),
+			})
 
 			r := echo.New()
 			r.Use(sdkInstance.EchoMiddleware)

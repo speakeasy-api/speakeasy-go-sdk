@@ -41,6 +41,7 @@ issues:
         - noctx
         - nosnakecase
         - maintidx
+        - gosec
     - path: _exports_test\.go
       linters:
         - testpackage
