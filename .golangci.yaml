@@ -12,34 +12,53 @@ linters:
     - gochecknoglobals
     - paralleltest
     - dupl
-    - containedctx
-    # Deprecated
     - golint
     - maligned
+    # deprecated/archived
     - interfacer
     - scopelint
 issues:
-  exclude:
-    - "returns unexported type"
-    - "unlambda"
-    - "should rewrite http.NewRequestWithContext"
-  exclude-rules:
-    # Exclude some linters from running on tests files.
-    - path: _test\.go
-      linters:
-        - scopelint
-        - goerr113
-        - funlen
-        - gocognit
-        - cyclop
-        - nosnakecase
-    - path: _exports_test\.go
-      linters:
-        - testpackage
   include:
+    - EXC0002
+    - EXC0011
     - EXC0012
     - EXC0013
     - EXC0014
     - EXC0015
+  exclude:
+    - "returns unexported type"
+    - "unlambda"
+  exclude-rules:
+    # Exclude some linters from running on tests files.
+    - path: _test\.go
+      linters:
+        - goerr113
+        - funlen
+        - godot
+        - dupl
+        - gocognit
+        - cyclop
+        - noctx
+        - nosnakecase
+        - maintidx
+    - path: _exports_test\.go
+      linters:
+        - testpackage
+    - path: cmd/*
+      linters:
+        - funlen
+linters-settings:
+  tagliatelle:
+    case:
+      use-field-name: true
+      rules:
+        json: snake
+        yaml: camel
+  revive:
+    rules:
+      - name: var-naming
+        arguments: [["API"], []]
+  stylecheck:
+    checks: ["all", "-ST1000", "-ST1003"]
 run:
   go: "1.14"

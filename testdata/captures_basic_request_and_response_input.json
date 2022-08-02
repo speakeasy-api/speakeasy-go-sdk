@@ -1,0 +1,12 @@
+{
+    "name": "captures basic request and response",
+    "fields": {
+        "max_capture_size": 9437184
+    },
+    "args": {
+        "method": "GET",
+        "url": "http://test.com/test",
+        "response_status": 200,
+        "response_body": "test"
+    }
+}

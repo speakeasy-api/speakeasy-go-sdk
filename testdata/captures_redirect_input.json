@@ -1,0 +1,15 @@
+{
+    "name": "captures redirect",
+    "fields": {
+        "max_capture_size": 9437184
+    },
+    "args": {
+        "method": "GET",
+        "url": "http://test.com/test",
+        "response_status": 200,
+        "response_body": "test",
+        "response_headers": {
+            "Location": ["http://test.com/test2"]
+        }
+    }
+}
