@@ -4,14 +4,14 @@ var ExportServerURL = serverURL
 
 const ExportMaxIDSize = maxIDSize
 
-func (s *speakeasy) ExportGetSpeakeasyConfig() Config {
+func (s *Speakeasy) ExportGetSpeakeasyConfig() Config {
 	return s.config
 }
 
-func (s *speakeasy) ExportGetSpeakeasyServerURL() string {
+func (s *Speakeasy) ExportGetSpeakeasyServerURL() string {
 	return s.serverURL
 }
 
-func (s *speakeasy) ExportGetSpeakeasyServerSecure() bool {
+func (s *Speakeasy) ExportGetSpeakeasyServerSecure() bool {
 	return s.secure
 }

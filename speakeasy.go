@@ -30,7 +30,7 @@ var (
 	speakeasyVersion = "0.0.2" // TODO get this from CI
 	serverURL        = "https://grpc.prod.speakeasyapi.dev"
 
-	defaultInstance *speakeasy
+	defaultInstance *Speakeasy
 )
 
 const maxIDSize = 128
@@ -50,7 +50,9 @@ type Config struct {
 	GRPCDialer func() func(context.Context, string) (net.Conn, error)
 }
 
-type speakeasy struct {
+// Speakeasy is the concrete type for the Speakeasy SDK.
+// Don't instantiate this directly, use Configure() or New() instead.
+type Speakeasy struct {
 	config    Config
 	serverURL string
 	secure    bool
@@ -65,14 +67,14 @@ func Configure(config Config) {
 // New creates a new instance of the Speakeasy SDK.
 // This allows you to create multiple instances of the SDK
 // for specifying different API Keys for different APIs.
-func New(config Config) *speakeasy {
-	s := &speakeasy{}
+func New(config Config) *Speakeasy {
+	s := &Speakeasy{}
 	s.configure(config)
 
 	return s
 }
 
-func (s *speakeasy) configure(cfg Config) {
+func (s *Speakeasy) configure(cfg Config) {
 	mustValidateConfig(cfg)
 
 	// The below environment variables allow the overriding of the location of the ingest server.

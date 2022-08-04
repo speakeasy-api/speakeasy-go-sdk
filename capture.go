@@ -34,7 +34,7 @@ var timeSince = func(t time.Time) time.Duration {
 
 type handlerFunc func(http.ResponseWriter, *http.Request) error
 
-func (s *speakeasy) handleRequestResponse(w http.ResponseWriter, r *http.Request, next http.HandlerFunc, capturePathHint func(r *http.Request) string) {
+func (s *Speakeasy) handleRequestResponse(w http.ResponseWriter, r *http.Request, next http.HandlerFunc, capturePathHint func(r *http.Request) string) {
 	err := s.handleRequestResponseError(w, r, func(w http.ResponseWriter, r *http.Request) error {
 		next.ServeHTTP(w, r)
 		return nil
@@ -44,7 +44,7 @@ func (s *speakeasy) handleRequestResponse(w http.ResponseWriter, r *http.Request
 	}
 }
 
-func (s *speakeasy) handleRequestResponseError(w http.ResponseWriter, r *http.Request, next handlerFunc, capturePathHint func(r *http.Request) string) error {
+func (s *Speakeasy) handleRequestResponseError(w http.ResponseWriter, r *http.Request, next handlerFunc, capturePathHint func(r *http.Request) string) error {
 	startTime := timeNow()
 
 	cw := NewCaptureWriter(w, maxCaptureSize)
@@ -76,7 +76,7 @@ func (s *speakeasy) handleRequestResponseError(w http.ResponseWriter, r *http.Re
 	return err
 }
 
-func (s *speakeasy) captureRequestResponse(cw *captureWriter, r *http.Request, startTime time.Time, pathHint string) {
+func (s *Speakeasy) captureRequestResponse(cw *captureWriter, r *http.Request, startTime time.Time, pathHint string) {
 	var ctx context.Context = valueOnlyContext{r.Context()}
 
 	if cw.IsReqValid() && cw.GetReqBuffer().Len() == 0 && r.Body != nil {
@@ -126,7 +126,7 @@ func (s *speakeasy) captureRequestResponse(cw *captureWriter, r *http.Request, s
 	}
 }
 
-func (s *speakeasy) buildHarFile(ctx context.Context, cw *captureWriter, r *http.Request, startTime time.Time) *har.HAR {
+func (s *Speakeasy) buildHarFile(ctx context.Context, cw *captureWriter, r *http.Request, startTime time.Time) *har.HAR {
 	return &har.HAR{
 		Log: &har.Log{
 			Version: "1.2",
@@ -150,7 +150,7 @@ func (s *speakeasy) buildHarFile(ctx context.Context, cw *captureWriter, r *http
 }
 
 // nolint:cyclop,funlen
-func (s *speakeasy) getHarRequest(ctx context.Context, cw *captureWriter, r *http.Request) *har.Request {
+func (s *Speakeasy) getHarRequest(ctx context.Context, cw *captureWriter, r *http.Request) *har.Request {
 	reqHeaders := []*har.NameValuePair{}
 	for k, v := range r.Header {
 		for _, vv := range v {
@@ -218,7 +218,7 @@ func (s *speakeasy) getHarRequest(ctx context.Context, cw *captureWriter, r *htt
 	}
 }
 
-func (s *speakeasy) getHarResponse(ctx context.Context, cw *captureWriter, r *http.Request, startTime time.Time) *har.Response {
+func (s *Speakeasy) getHarResponse(ctx context.Context, cw *captureWriter, r *http.Request, startTime time.Time) *har.Response {
 	resHeaders := []*har.NameValuePair{}
 
 	cookieParser := http.Response{Header: http.Header{}}
