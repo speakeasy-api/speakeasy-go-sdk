@@ -15,7 +15,7 @@ const (
 )
 
 var (
-	speakeasyVersion = "0.0.2" // TODO get this from CI
+	speakeasyVersion = "0.0.3" // TODO get this from CI
 	serverURL        = "https://api.speakeasyapi.dev"
 
 	defaultInstance *speakeasy
