@@ -81,9 +81,8 @@ func (s *Speakeasy) captureRequestResponse(cw *captureWriter, r *http.Request, s
 
 	if cw.IsReqValid() && cw.GetReqBuffer().Len() == 0 && r.Body != nil {
 		// Read the body just in case it was not read in the handler
-		if _, err := io.Copy(ioutil.Discard, r.Body); err != nil {
-			log.From(ctx).Error("speakeasy-sdk: failed to read request body", zap.Error(err))
-		}
+		// nolint: errcheck
+		io.Copy(ioutil.Discard, r.Body)
 	}
 
 	opts := []grpc.DialOption{}
