@@ -133,7 +133,7 @@ func (s *speakeasy) buildHarFile(ctx context.Context, cw *captureWriter, r *http
 			Comment: "request capture for " + r.URL.String(),
 			Entries: []*har.Entry{
 				{
-					StartedDateTime: startTime.Format(time.RFC3339),
+					StartedDateTime: startTime.Format(time.RFC3339Nano),
 					Time:            float64(timeSince(startTime).Milliseconds()),
 					Request:         s.getHarRequest(ctx, cw, r),
 					Response:        s.getHarResponse(ctx, cw, r, startTime),
@@ -286,9 +286,9 @@ func getHarCookies(cookies []*http.Cookie, startTime time.Time) []*har.Cookie {
 		}
 
 		if cookie.MaxAge != 0 {
-			harCookie.Expires = startTime.Add(time.Duration(cookie.MaxAge) * time.Second).Format(time.RFC3339)
+			harCookie.Expires = startTime.Add(time.Duration(cookie.MaxAge) * time.Second).Format(time.RFC3339Nano)
 		} else if (cookie.Expires != time.Time{}) {
-			harCookie.Expires = cookie.Expires.Format(time.RFC3339)
+			harCookie.Expires = cookie.Expires.Format(time.RFC3339Nano)
 		}
 
 		harCookies = append(harCookies, harCookie)

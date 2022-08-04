@@ -38,13 +38,15 @@ type fields struct {
 	MaxCaptureSize int `json:"max_capture_size,omitempty"`
 }
 type args struct {
-	Method          string              `json:"method"`
-	URL             string              `json:"url"`
-	Headers         map[string][]string `json:"headers,omitempty"`
-	Body            string              `json:"body,omitempty"`
-	ResponseStatus  int                 `json:"response_status,omitempty"`
-	ResponseBody    string              `json:"response_body,omitempty"`
-	ResponseHeaders map[string][]string `json:"response_headers,omitempty"`
+	Method           string              `json:"method"`
+	URL              string              `json:"url"`
+	Headers          map[string][]string `json:"headers"`
+	Body             string              `json:"body"`
+	RequestStartTime time.Time           `json:"request_start_time"`
+	ElapsedTime      int                 `json:"elapsed_time"`
+	ResponseStatus   int                 `json:"response_status"`
+	ResponseBody     string              `json:"response_body"`
+	ResponseHeaders  map[string][]string `json:"response_headers"`
 }
 type test struct {
 	Name    string `json:"name"`
@@ -96,8 +98,16 @@ func TestSpeakeasy_Middleware_Capture_Success(t *testing.T) {
 			captured := false
 			handled := false
 
-			speakeasy.ExportSetTimeNow(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC))
-			speakeasy.ExportSetTimeSince(1 * time.Millisecond)
+			if tt.Args.RequestStartTime.IsZero() {
+				speakeasy.ExportSetTimeNow(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC))
+			} else {
+				speakeasy.ExportSetTimeNow(tt.Args.RequestStartTime)
+			}
+			if tt.Args.ElapsedTime == 0 {
+				speakeasy.ExportSetTimeSince(1 * time.Millisecond)
+			} else {
+				speakeasy.ExportSetTimeSince(time.Duration(tt.Args.ElapsedTime) * time.Millisecond)
+			}
 
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
@@ -386,8 +396,16 @@ func TestSpeakeasy_GinMiddleware_Success(t *testing.T) {
 			captured := false
 			handled := false
 
-			speakeasy.ExportSetTimeNow(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC))
-			speakeasy.ExportSetTimeSince(1 * time.Millisecond)
+			if tt.Args.RequestStartTime.IsZero() {
+				speakeasy.ExportSetTimeNow(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC))
+			} else {
+				speakeasy.ExportSetTimeNow(tt.Args.RequestStartTime)
+			}
+			if tt.Args.ElapsedTime == 0 {
+				speakeasy.ExportSetTimeSince(1 * time.Millisecond)
+			} else {
+				speakeasy.ExportSetTimeSince(time.Duration(tt.Args.ElapsedTime) * time.Millisecond)
+			}
 
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
@@ -552,8 +570,16 @@ func TestSpeakeasy_EchoMiddleware_Success(t *testing.T) {
 			captured := false
 			handled := false
 
-			speakeasy.ExportSetTimeNow(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC))
-			speakeasy.ExportSetTimeSince(1 * time.Millisecond)
+			if tt.Args.RequestStartTime.IsZero() {
+				speakeasy.ExportSetTimeNow(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC))
+			} else {
+				speakeasy.ExportSetTimeNow(tt.Args.RequestStartTime)
+			}
+			if tt.Args.ElapsedTime == 0 {
+				speakeasy.ExportSetTimeSince(1 * time.Millisecond)
+			} else {
+				speakeasy.ExportSetTimeSince(time.Duration(tt.Args.ElapsedTime) * time.Millisecond)
+			}
 
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
