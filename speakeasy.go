@@ -16,7 +16,7 @@ const (
 
 var (
 	speakeasyVersion = "0.0.3" // TODO get this from CI
-	serverURL        = "https://api.speakeasyapi.dev"
+	serverURL        = "https://grpc.prod.speakeasyapi.dev"
 
 	defaultInstance *speakeasy
 )
