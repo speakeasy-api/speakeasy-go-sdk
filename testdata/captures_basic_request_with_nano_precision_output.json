@@ -7,8 +7,8 @@
         },
         "entries": [
             {
-                "startedDateTime": "2020-01-01T00:00:00Z",
-                "time": 1,
+                "startedDateTime": "2020-01-01T00:00:00.0000005Z",
+                "time": 2,
                 "request": {
                     "method": "GET",
                     "url": "http://test.com/test",
