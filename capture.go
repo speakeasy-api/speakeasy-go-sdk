@@ -289,9 +289,9 @@ func getHarCookies(cookies []*http.Cookie, startTime time.Time) []*har.Cookie {
 		}
 
 		if cookie.MaxAge != 0 {
-			harCookie.Expires = startTime.Add(time.Duration(cookie.MaxAge) * time.Second).Format(time.RFC3339Nano)
+			harCookie.Expires = startTime.Add(time.Duration(cookie.MaxAge) * time.Second).Format(time.RFC3339)
 		} else if (cookie.Expires != time.Time{}) {
-			harCookie.Expires = cookie.Expires.Format(time.RFC3339Nano)
+			harCookie.Expires = cookie.Expires.Format(time.RFC3339)
 		}
 
 		harCookies = append(harCookies, harCookie)

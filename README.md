@@ -27,7 +27,7 @@ We also support custom HTTP frameworks:
 go get github.com/speakeasy-api/speakeasy-go-sdk
 ```
 
-## Minimum configuration
+### Minimum configuration
 
 [Sign up for free on our platform](https://www.speakeasyapi.dev/). After you've created a workspace and generated an API key enable Speakeasy in your API as follows:
 
@@ -55,10 +55,9 @@ and will be visible on the dashboard next time you log in. Visit our [docs site]
 learn more.
 
 
-## Advanced configuration
+### Advanced configuration
 
-The Speakeasy SDK provides both a global and per Api configuration option. If you want to use the SDK to track 
-multiple Apis or Versions from the same service you can configure individual instances of the SDK, like so:
+The Speakeasy SDK provides both a global and per Api configuration option. If you want to use the SDK to track multiple Apis or Versions from the same service you can configure individual instances of the SDK, like so:
 
 ```go
 import "github.com/speakeasy-api/speakeasy-go-sdk"

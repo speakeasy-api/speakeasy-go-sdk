@@ -33,9 +33,10 @@ var (
 	defaultInstance *Speakeasy
 )
 
-const maxIDSize = 128
-
-const validCharsRegexStr = `[^a-zA-Z0-9.\-_~]`
+const (
+	maxIDSize          = 128
+	validCharsRegexStr = `[^a-zA-Z0-9.\-_~]`
+)
 
 var validCharsRegex = regexp.MustCompile(validCharsRegexStr)
 
