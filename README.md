@@ -108,3 +108,17 @@ Wildcard path matching in Echo & Chi will end up with a OpenAPI path paramater c
 `chi template: /user/{id}/path/* => openapi template: /user/{id}/path/{wildcard}`
 
 And in the above example a path like `/user/1/path/some/sub/path` won't match but `/user/1/path/somesubpathstring` will, as `/` characters are not matched in path paramters by the OpenAPI spec.
+
+
+
+## Capturing Customer IDs
+
+To help associate requests with customers/users of your APIs you can provide a customer ID per request handler:
+
+```go
+func MyHandler(w http.ResponseWriter, r *http.Request) {
+	ctrl := speakeasy.MiddlewareController(req)
+	ctrl.CustomerID("a-customers-id") // This customer ID will be used to associate this instance of a request with your customers/users
+	
+	// the rest of your handlers code
+}
