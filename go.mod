@@ -13,7 +13,7 @@ require (
 	github.com/go-chi/chi/v5 v5.0.7
 	github.com/gorilla/mux v1.8.0
 	github.com/labstack/echo/v4 v4.7.2
-	github.com/speakeasy-api/speakeasy-schemas v0.0.2-0.20220802083439-55223455d0c3
+	github.com/speakeasy-api/speakeasy-schemas v1.1.0
 	go.uber.org/zap v1.21.0
 	google.golang.org/grpc v1.48.0
 )

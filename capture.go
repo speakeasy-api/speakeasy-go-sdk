@@ -81,14 +81,14 @@ func (s *Speakeasy) captureRequestResponse(cw *captureWriter, r *http.Request, s
 
 	if cw.IsReqValid() && cw.GetReqBuffer().Len() == 0 && r.Body != nil {
 		// Read the body just in case it was not read in the handler
-		// nolint: errcheck
+		//nolint: errcheck
 		io.Copy(ioutil.Discard, r.Body)
 	}
 
 	opts := []grpc.DialOption{}
 
 	if s.secure {
-		// nolint: gosec
+		//nolint: gosec
 		opts = append(opts, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})))
 	} else {
 		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -148,7 +148,7 @@ func (s *Speakeasy) buildHarFile(ctx context.Context, cw *captureWriter, r *http
 	}
 }
 
-// nolint:cyclop,funlen
+//nolint:cyclop,funlen
 func (s *Speakeasy) getHarRequest(ctx context.Context, cw *captureWriter, r *http.Request) *har.Request {
 	reqHeaders := []*har.NameValuePair{}
 	for k, v := range r.Header {
@@ -301,10 +301,10 @@ func getHarCookies(cookies []*http.Cookie, startTime time.Time) []*har.Cookie {
 }
 
 // This allows us to not be affected by context cancellation of the request that spawned our request capture while still retaining any context values.
-// nolint:containedctx
+//nolint:containedctx
 type valueOnlyContext struct{ context.Context }
 
-// nolint
+//nolint
 func (valueOnlyContext) Deadline() (deadline time.Time, ok bool) { return }
 func (valueOnlyContext) Done() <-chan struct{}                   { return nil }
 func (valueOnlyContext) Err() error                              { return nil }

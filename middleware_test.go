@@ -32,7 +32,7 @@ import (
 func TestMain(m *testing.M) {
 	rand.Seed(time.Now().UnixNano())
 
-	// nolint:tenv,nolintlint
+	//nolint:tenv,nolintlint
 	os.Setenv("SPEAKEASY_SERVER_SECURE", "false")
 	gin.SetMode(gin.ReleaseMode)
 	os.Exit(m.Run())
