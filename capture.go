@@ -301,10 +301,11 @@ func getHarCookies(cookies []*http.Cookie, startTime time.Time) []*har.Cookie {
 }
 
 // This allows us to not be affected by context cancellation of the request that spawned our request capture while still retaining any context values.
+//
 //nolint:containedctx
 type valueOnlyContext struct{ context.Context }
 
-//nolint
+//nolint:nonamedreturns
 func (valueOnlyContext) Deadline() (deadline time.Time, ok bool) { return }
 func (valueOnlyContext) Done() <-chan struct{}                   { return nil }
 func (valueOnlyContext) Err() error                              { return nil }
