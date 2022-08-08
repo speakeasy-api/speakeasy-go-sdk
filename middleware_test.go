@@ -796,6 +796,70 @@ func TestSpeakeasy_EchoMiddleware_PathHint_Success(t *testing.T) {
 	}
 }
 
+func TestSpeakeasy_Middleware_Capture_CustomerID_Success(t *testing.T) {
+	type args struct {
+		url        string
+		customerID string
+	}
+	tests := []struct {
+		name           string
+		args           args
+		wantCustomerID string
+	}{
+		{
+			name: "captures simple path hint from mux",
+			args: args{
+				url:        "http://test.com/user/1",
+				customerID: "a-customers-id",
+			},
+			wantCustomerID: "a-customers-id",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			captured := false
+			handled := false
+
+			speakeasy.ExportSetTimeNow(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC))
+			speakeasy.ExportSetTimeSince(1 * time.Millisecond)
+
+			wg := &sync.WaitGroup{}
+			wg.Add(1)
+
+			sdkInstance := speakeasy.New(speakeasy.Config{
+				APIKey:    testAPIKey,
+				ApiID:     testApiID,
+				VersionID: testVersionID,
+				GRPCDialer: dialer(func(ctx context.Context, req *ingest.IngestRequest) {
+					assert.Equal(t, tt.wantCustomerID, req.CustomerId)
+					captured = true
+					wg.Done()
+				}),
+			})
+
+			w := httptest.NewRecorder()
+
+			req, err := http.NewRequest(http.MethodGet, tt.args.url, nil)
+			assert.NoError(t, err)
+
+			sdkInstance.Middleware(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				ctrl := speakeasy.MiddlewareController(req)
+				require.NotNil(t, ctrl)
+				ctrl.CustomerID(tt.args.customerID)
+
+				w.WriteHeader(http.StatusOK)
+				handled = true
+			})).ServeHTTP(w, req)
+
+			wg.Wait()
+
+			assert.True(t, handled, "middleware did not call handler")
+			assert.True(t, captured, "middleware did not capture request")
+			assert.Equal(t, http.StatusOK, w.Code)
+		})
+	}
+}
+
 func dialer(handlerFunc func(ctx context.Context, req *ingest.IngestRequest)) func() func(context.Context, string) (net.Conn, error) {
 	return func() func(context.Context, string) (net.Conn, error) {
 		listener := bufconn.Listen(1024 * 1024)

@@ -71,12 +71,12 @@ func (s *Speakeasy) handleRequestResponseError(w http.ResponseWriter, r *http.Re
 	}
 
 	// Assuming response is done
-	go s.captureRequestResponse(cw, r, startTime, pathHint)
+	go s.captureRequestResponse(cw, r, startTime, pathHint, c.customerID)
 
 	return err
 }
 
-func (s *Speakeasy) captureRequestResponse(cw *captureWriter, r *http.Request, startTime time.Time, pathHint string) {
+func (s *Speakeasy) captureRequestResponse(cw *captureWriter, r *http.Request, startTime time.Time, pathHint, customerID string) {
 	var ctx context.Context = valueOnlyContext{r.Context()}
 
 	if cw.IsReqValid() && cw.GetReqBuffer().Len() == 0 && r.Body != nil {
@@ -114,10 +114,11 @@ func (s *Speakeasy) captureRequestResponse(cw *captureWriter, r *http.Request, s
 	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("x-api-key", s.config.APIKey))
 
 	_, err = ingest.NewIngestServiceClient(conn).Ingest(ctx, &ingest.IngestRequest{
-		Har:       string(harData),
-		PathHint:  pathHint,
-		ApiId:     s.config.ApiID,
-		VersionId: s.config.VersionID,
+		Har:        string(harData),
+		PathHint:   pathHint,
+		ApiId:      s.config.ApiID,
+		VersionId:  s.config.VersionID,
+		CustomerId: customerID,
 	})
 	if err != nil {
 		log.From(ctx).Error("speakeasy-sdk: failed to send ingest request", zap.Error(err))
