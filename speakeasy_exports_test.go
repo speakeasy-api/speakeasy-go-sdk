@@ -2,10 +2,16 @@ package speakeasy
 
 var ExportServerURL = serverURL
 
-func (s *speakeasy) ExportGetSpeakeasyConfig() Config {
+const ExportMaxIDSize = maxIDSize
+
+func (s *Speakeasy) ExportGetSpeakeasyConfig() Config {
 	return s.config
 }
 
-func (s *speakeasy) ExportGetSpeakeasyServerURL() string {
+func (s *Speakeasy) ExportGetSpeakeasyServerURL() string {
 	return s.serverURL
+}
+
+func (s *Speakeasy) ExportGetSpeakeasyServerSecure() bool {
+	return s.secure
 }

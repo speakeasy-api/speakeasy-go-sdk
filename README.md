@@ -8,13 +8,13 @@ The Speakeasy Go SDK for evaluating API requests/responses. Compatible with any 
 
 ## Requirements
 
-Supported frameworks: 
+Supported routers: 
 
 * gorilla/mux
 * go-chi/chi
 * http.DefaultServerMux
 
-We also support custom Http frameworks: 
+We also support custom HTTP frameworks: 
 
 * gin-gonic/gin
 * labstack/echo
@@ -27,20 +27,26 @@ We also support custom Http frameworks:
 go get github.com/speakeasy-api/speakeasy-go-sdk
 ```
 
-## Minimum configuration
+### Minimum configuration
 
 [Sign up for free on our platform](https://www.speakeasyapi.dev/). After you've created a workspace and generated an API key enable Speakeasy in your API as follows:
 
-Configure Speakeasy at the start of your `main()` function with just 2 lines of code:
+Configure Speakeasy at the start of your `main()` function:
 
 ```go
 import "github.com/speakeasy-api/speakeasy-go-sdk"
 
 func main() {
-	speakeasy.Configure(speakeasy.Configuration {
-		APIKey:     "YOUR API KEY HERE",     // retrieve from Speakeasy API dashboard
+	// Configure the Global SDK
+	speakeasy.Configure(speakeasy.Config {
+		APIKey:		"YOUR API KEY HERE",	// retrieve from Speakeasy API dashboard.
+		ApiID:		"YOUR API ID HERE", 	// custom Api ID to associate captured requests with.
+		VersionID:	"YOUR VERSION ID HERE",	// custom Version ID to associate captured requests with.
 	})
-	// rest of your program.
+
+    // Associate the SDK's middleware with your router
+	r := mux.NewRouter()
+	r.Use(speakeasy.Middleware)
 }
 ```
 
@@ -49,7 +55,70 @@ and will be visible on the dashboard next time you log in. Visit our [docs site]
 learn more.
 
 
-## Optional Arguments
+### Advanced configuration
 
-Coming soon !
+The Speakeasy SDK provides both a global and per Api configuration option. If you want to use the SDK to track multiple Apis or Versions from the same service you can configure individual instances of the SDK, like so:
+
+```go
+import "github.com/speakeasy-api/speakeasy-go-sdk"
+
+func main() {
+	// Configure a new instance of the SDK
+	sdkInstance := speakeasy.New(speakeasy.Config {
+		APIKey:		"YOUR API KEY HERE",	// retrieve from Speakeasy API dashboard.
+		ApiID:		"YOUR API ID HERE", 	// custom Api ID to associate captured requests with.
+		VersionID:	"YOUR VERSION ID HERE",	// custom Version ID to associate captured requests with.
+	})
+
+    // Associate the SDK's middleware with your router
+	r := mux.NewRouter()
+	r.Use(sdkInstance.Middleware)
+}
 ```
+
+This allows multiple instances of the SDK to be associated with different routers or routes within your service.
+
+## Request Matching
+
+The Speakeasy SDK out of the box will do its best to match requests to your provided OpenAPI Schema. It does this by extracting the path template used by one of the supported routers or frameworks above for each request captured and attempting to match it to the paths defined in the OpenAPI Schema, for example:
+
+```go
+r := mux.NewRouter()
+r.Use(sdkInstance.Middleware)
+r.HandleFunc("/v1/users/{id}", MyHandler) // The path template "/v1/users/{id}" is captured automatically by the SDK
+```
+
+This isn't always successful or even possible, meaning requests received by Speakeasy will be marked as `unmatched`, and potentially not associated with your Api, Version or ApiEndpoints in the Speakeasy Dashboard.
+
+To help the SDK in these situations you can provide path hints per request handler that match the paths in your OpenAPI Schema:
+
+```go
+func MyHandler(w http.ResponseWriter, r *http.Request) {
+	// Provide a path hint for the request using the OpenAPI Path Templating format: https://swagger.io/specification/#path-templating-matching
+	ctrl := speakeasy.MiddlewareController(req)
+	ctrl.PathHint("/v1/users/{id}")
+	
+	// the rest of your handlers code
+}
+```
+
+Notes:  
+Wildcard path matching in Echo & Chi will end up with a OpenAPI path paramater called {wildcard} which will only match single level values represented by the wildcard. This is a restriction of the OpenAPI spec ([Detail Here](https://github.com/OAI/OpenAPI-Specification/issues/892#issuecomment-281449239)). For example: 
+
+`chi template: /user/{id}/path/* => openapi template: /user/{id}/path/{wildcard}`
+
+And in the above example a path like `/user/1/path/some/sub/path` won't match but `/user/1/path/somesubpathstring` will, as `/` characters are not matched in path paramters by the OpenAPI spec.
+
+
+
+## Capturing Customer IDs
+
+To help associate requests with customers/users of your APIs you can provide a customer ID per request handler:
+
+```go
+func MyHandler(w http.ResponseWriter, r *http.Request) {
+	ctrl := speakeasy.MiddlewareController(req)
+	ctrl.CustomerID("a-customers-id") // This customer ID will be used to associate this instance of a request with your customers/users
+	
+	// the rest of your handlers code
+}

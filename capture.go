@@ -13,6 +13,7 @@ import (
 
 	"github.com/chromedp/cdproto/har"
 	"github.com/speakeasy-api/speakeasy-go-sdk/internal/log"
+	"github.com/speakeasy-api/speakeasy-go-sdk/internal/pathhints"
 	"github.com/speakeasy-api/speakeasy-schemas/grpc/go/registry/ingest"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -21,7 +22,7 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-var maxCaptureSize = 9 * 1024 * 1024
+var maxCaptureSize = 1 * 1024 * 1024
 
 var timeNow = func() time.Time {
 	return time.Now()
@@ -33,7 +34,7 @@ var timeSince = func(t time.Time) time.Duration {
 
 type handlerFunc func(http.ResponseWriter, *http.Request) error
 
-func (s *speakeasy) handleRequestResponse(w http.ResponseWriter, r *http.Request, next http.HandlerFunc, capturePathHint func(r *http.Request) string) {
+func (s *Speakeasy) handleRequestResponse(w http.ResponseWriter, r *http.Request, next http.HandlerFunc, capturePathHint func(r *http.Request) string) {
 	err := s.handleRequestResponseError(w, r, func(w http.ResponseWriter, r *http.Request) error {
 		next.ServeHTTP(w, r)
 		return nil
@@ -43,7 +44,7 @@ func (s *speakeasy) handleRequestResponse(w http.ResponseWriter, r *http.Request
 	}
 }
 
-func (s *speakeasy) handleRequestResponseError(w http.ResponseWriter, r *http.Request, next handlerFunc, capturePathHint func(r *http.Request) string) error {
+func (s *Speakeasy) handleRequestResponseError(w http.ResponseWriter, r *http.Request, next handlerFunc, capturePathHint func(r *http.Request) string) error {
 	startTime := timeNow()
 
 	cw := NewCaptureWriter(w, maxCaptureSize)
@@ -62,6 +63,7 @@ func (s *speakeasy) handleRequestResponseError(w http.ResponseWriter, r *http.Re
 	err := next(cw.GetResponseWriter(), r)
 
 	pathHint := capturePathHint(r)
+	pathHint = pathhints.NormalizePathHint(pathHint)
 
 	// if developer has provided a path hint use it, otherwise use the pathHint from the request
 	if c.pathHint != "" {
@@ -69,25 +71,24 @@ func (s *speakeasy) handleRequestResponseError(w http.ResponseWriter, r *http.Re
 	}
 
 	// Assuming response is done
-	go s.captureRequestResponse(cw, r, startTime, pathHint)
+	go s.captureRequestResponse(cw, r, startTime, pathHint, c.customerID)
 
 	return err
 }
 
-func (s *speakeasy) captureRequestResponse(cw *captureWriter, r *http.Request, startTime time.Time, pathHint string) {
+func (s *Speakeasy) captureRequestResponse(cw *captureWriter, r *http.Request, startTime time.Time, pathHint, customerID string) {
 	var ctx context.Context = valueOnlyContext{r.Context()}
 
 	if cw.IsReqValid() && cw.GetReqBuffer().Len() == 0 && r.Body != nil {
 		// Read the body just in case it was not read in the handler
-		if _, err := io.Copy(ioutil.Discard, r.Body); err != nil {
-			log.From(ctx).Error("speakeasy-sdk: failed to read request body", zap.Error(err))
-		}
+		//nolint: errcheck
+		io.Copy(ioutil.Discard, r.Body)
 	}
 
 	opts := []grpc.DialOption{}
 
 	if s.secure {
-		// nolint: gosec
+		//nolint: gosec
 		opts = append(opts, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})))
 	} else {
 		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -113,8 +114,11 @@ func (s *speakeasy) captureRequestResponse(cw *captureWriter, r *http.Request, s
 	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("x-api-key", s.config.APIKey))
 
 	_, err = ingest.NewIngestServiceClient(conn).Ingest(ctx, &ingest.IngestRequest{
-		Har:      string(harData),
-		PathHint: pathHint,
+		Har:        string(harData),
+		PathHint:   pathHint,
+		ApiId:      s.config.ApiID,
+		VersionId:  s.config.VersionID,
+		CustomerId: customerID,
 	})
 	if err != nil {
 		log.From(ctx).Error("speakeasy-sdk: failed to send ingest request", zap.Error(err))
@@ -122,7 +126,7 @@ func (s *speakeasy) captureRequestResponse(cw *captureWriter, r *http.Request, s
 	}
 }
 
-func (s *speakeasy) buildHarFile(ctx context.Context, cw *captureWriter, r *http.Request, startTime time.Time) *har.HAR {
+func (s *Speakeasy) buildHarFile(ctx context.Context, cw *captureWriter, r *http.Request, startTime time.Time) *har.HAR {
 	return &har.HAR{
 		Log: &har.Log{
 			Version: "1.2",
@@ -145,8 +149,8 @@ func (s *speakeasy) buildHarFile(ctx context.Context, cw *captureWriter, r *http
 	}
 }
 
-// nolint:cyclop,funlen
-func (s *speakeasy) getHarRequest(ctx context.Context, cw *captureWriter, r *http.Request) *har.Request {
+//nolint:cyclop,funlen
+func (s *Speakeasy) getHarRequest(ctx context.Context, cw *captureWriter, r *http.Request) *har.Request {
 	reqHeaders := []*har.NameValuePair{}
 	for k, v := range r.Header {
 		for _, vv := range v {
@@ -214,7 +218,7 @@ func (s *speakeasy) getHarRequest(ctx context.Context, cw *captureWriter, r *htt
 	}
 }
 
-func (s *speakeasy) getHarResponse(ctx context.Context, cw *captureWriter, r *http.Request, startTime time.Time) *har.Response {
+func (s *Speakeasy) getHarResponse(ctx context.Context, cw *captureWriter, r *http.Request, startTime time.Time) *har.Response {
 	resHeaders := []*har.NameValuePair{}
 
 	cookieParser := http.Response{Header: http.Header{}}
@@ -286,9 +290,9 @@ func getHarCookies(cookies []*http.Cookie, startTime time.Time) []*har.Cookie {
 		}
 
 		if cookie.MaxAge != 0 {
-			harCookie.Expires = startTime.Add(time.Duration(cookie.MaxAge) * time.Second).Format(time.RFC3339Nano)
+			harCookie.Expires = startTime.Add(time.Duration(cookie.MaxAge) * time.Second).Format(time.RFC3339)
 		} else if (cookie.Expires != time.Time{}) {
-			harCookie.Expires = cookie.Expires.Format(time.RFC3339Nano)
+			harCookie.Expires = cookie.Expires.Format(time.RFC3339)
 		}
 
 		harCookies = append(harCookies, harCookie)
@@ -298,10 +302,11 @@ func getHarCookies(cookies []*http.Cookie, startTime time.Time) []*har.Cookie {
 }
 
 // This allows us to not be affected by context cancellation of the request that spawned our request capture while still retaining any context values.
-// nolint:containedctx
+//
+//nolint:containedctx
 type valueOnlyContext struct{ context.Context }
 
-// nolint
+//nolint:nonamedreturns
 func (valueOnlyContext) Deadline() (deadline time.Time, ok bool) { return }
 func (valueOnlyContext) Done() <-chan struct{}                   { return nil }
 func (valueOnlyContext) Err() error                              { return nil }

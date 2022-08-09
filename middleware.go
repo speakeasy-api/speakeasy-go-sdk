@@ -19,7 +19,7 @@ func Middleware(next http.Handler) http.Handler {
 // Middleware setups the current instance of the SDK to start capturing requests from routers that support http.Handlers.
 // Currently only gorilla/mux, go-chi/chi routers and the http.DefaultServerMux are supported for automatically
 // capturing path hints. Otherwise path hints can be supplied by a handler through the speakeasy MiddlewareController.
-func (s *speakeasy) Middleware(next http.Handler) http.Handler {
+func (s *Speakeasy) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		s.handleRequestResponse(w, r, next.ServeHTTP, func(r *http.Request) string {
 			var pathHint string
@@ -56,7 +56,7 @@ func GinMiddleware(c *gin.Context) {
 }
 
 // GinMiddleware setups the current instance of the SDK to start capturing requests from the gin http framework.
-func (s *speakeasy) GinMiddleware(c *gin.Context) {
+func (s *Speakeasy) GinMiddleware(c *gin.Context) {
 	s.handleRequestResponse(c.Writer, c.Request, func(w http.ResponseWriter, r *http.Request) {
 		c.Writer = &ginResponseWriter{c.Writer, w}
 		c.Request = r
@@ -75,7 +75,7 @@ func EchoMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 }
 
 // EchoMiddleware setups the current instance of the SDK to start capturing requests from the echo http framework.
-func (s *speakeasy) EchoMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+func (s *Speakeasy) EchoMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		return s.handleRequestResponseError(c.Response(), c.Request(), func(w http.ResponseWriter, r *http.Request) error {
 			c.SetResponse(echo.NewResponse(w, c.Echo()))

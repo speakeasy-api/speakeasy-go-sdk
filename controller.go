@@ -12,7 +12,8 @@ const (
 )
 
 type controller struct {
-	pathHint string
+	pathHint   string
+	customerID string
 }
 
 // MiddlewareController will return the speakeasy middleware controller from the current request,
@@ -25,6 +26,11 @@ func MiddlewareController(r *http.Request) *controller {
 // PathHint will allow you to provide a path hint for the current request.
 func (c *controller) PathHint(pathHint string) {
 	c.pathHint = pathHint
+}
+
+// CustomerID will allow you to associate a customer ID with the current request.
+func (c *controller) CustomerID(customerID string) {
+	c.customerID = customerID
 }
 
 func contextWithController(ctx context.Context) (context.Context, *controller) {
