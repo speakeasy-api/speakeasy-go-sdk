@@ -78,6 +78,13 @@ func main() {
 
 This allows multiple instances of the SDK to be associated with different routers or routes within your service.
 
+### On-Premise Configuration
+
+The SDK provides a way to redirect the requests it captures to an on-premise deployment of the Speakeasy Platform. This is done through the use of environment variables listed below. These are to be set in the environment of your services that have integrated the SDK:
+
+* `SPEAKEASY_SERVER_URL` - The url of the on-premise Speakeasy Platform's GRPC Endpoint. By default this is `grpc.prod.speakeasyapi.dev:443`.
+* `SPEAKEASY_SERVER_SECURE` - Whether or not to use TLS for the on-premise Speakeasy Platform. By default this is `true` set to `SPEAKEASY_SERVER_SECURE="false"` if you are using an insecure connection.
+
 ## Request Matching
 
 The Speakeasy SDK out of the box will do its best to match requests to your provided OpenAPI Schema. It does this by extracting the path template used by one of the supported routers or frameworks above for each request captured and attempting to match it to the paths defined in the OpenAPI Schema, for example:
@@ -122,3 +129,5 @@ func MyHandler(w http.ResponseWriter, r *http.Request) {
 	
 	// the rest of your handlers code
 }
+
+Note: This is not required, but is highly recommended. By setting a customer ID you can easily associate requests with your customers/users in the Speakeasy Dashboard, powering filters in the Request Viewer [(Coming soon)](https://docs.speakeasyapi.dev/speakeasy-user-guide/request-viewer-coming-soon).
