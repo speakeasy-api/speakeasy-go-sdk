@@ -1,14 +1,23 @@
 {
-    "name": "captures basic request with nano precision",
-    "fields": {
-        "max_capture_size": 9437184
-    },
-    "args": {
-        "method": "GET",
-        "url": "http://test.com/test",
-        "request_start_time": "2020-01-01T00:00:00.0000005Z",
-        "elapsed_time": 2,
-        "response_status": 200,
-        "response_body": "test"
-    }
+  "name": "captures basic request with nano precision",
+  "fields": {
+    "max_capture_size": 9437184
+  },
+  "args": {
+    "method": "GET",
+    "url": "http://test.com/test",
+    "headers": [
+      { "key": "host", "values": ["test.com"] },
+      { "key": "accept-encoding", "values": ["gzip, deflate"] },
+      { "key": "connection", "values": ["close"] }
+    ],
+    "request_start_time": "2020-01-01T00:00:00.0000005Z",
+    "elapsed_time": 2,
+    "response_status": 200,
+    "response_body": "test",
+    "response_headers": [
+      { "key": "content-type", "values": ["application/octet-stream"] },
+      { "key": "content-length", "values": ["4"] }
+    ]
+  }
 }

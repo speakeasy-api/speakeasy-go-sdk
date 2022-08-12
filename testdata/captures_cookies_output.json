@@ -1,135 +1,159 @@
 {
-    "log": {
-        "version": "1.2",
-        "creator": {
-            "name": "speakeasy-go-sdk",
-            "version": "1.1.0"
-        },
-        "entries": [
+  "log": {
+    "version": "1.2",
+    "creator": {
+      "name": "speakeasy-go-sdk",
+      "version": "1.1.2"
+    },
+    "entries": [
+      {
+        "startedDateTime": "2020-01-01T00:00:00Z",
+        "time": 1,
+        "request": {
+          "method": "GET",
+          "url": "http://test.com/test",
+          "httpVersion": "HTTP/1.1",
+          "cookies": [
             {
-                "startedDateTime": "2020-01-01T00:00:00Z",
-                "time": 1,
-                "request": {
-                    "method": "GET",
-                    "url": "http://test.com/test",
-                    "httpVersion": "HTTP/1.1",
-                    "cookies": [
-                        {
-                            "name": "cookie1",
-                            "value": "value1"
-                        },
-                        {
-                            "name": "cookie2",
-                            "value": "value2"
-                        }
-                    ],
-                    "headers": [
-                        {
-                            "name": "Cookie",
-                            "value": "cookie1=value1; cookie2=value2"
-                        }
-                    ],
-                    "queryString": [],
-                    "headersSize": 40,
-                    "bodySize": 0
-                },
-                "response": {
-                    "status": 200,
-                    "statusText": "OK",
-                    "httpVersion": "HTTP/1.1",
-                    "cookies": [
-                        {
-                            "name": "cookie1",
-                            "value": "value1"
-                        },
-                        {
-                            "name": "cookie2",
-                            "value": "value2",
-                            "expires": "2020-01-01T01:00:00Z"
-                        },
-                        {
-                            "name": "cookie3",
-                            "value": "value3",
-                            "expires": "2015-10-21T07:28:00Z"
-                        },
-                        {
-                            "name": "cookie4",
-                            "value": "value4",
-                            "domain": "test.com"
-                        },
-                        {
-                            "name": "cookie5",
-                            "value": "value5",
-                            "path": "/test"
-                        },
-                        {
-                            "name": "cookie6",
-                            "value": "value6",
-                            "secure": true
-                        },
-                        {
-                            "name": "cookie7",
-                            "value": "value7",
-                            "httpOnly": true
-                        },
-                        {
-                            "name": "cookie8",
-                            "value": "value8",
-                            "path": "/test",
-                            "domain": "test.com",
-                            "expires": "2020-01-01T01:00:00Z",
-                            "httpOnly": true,
-                            "secure": true
-                        }
-                    ],
-                    "headers": [
-                        {
-                            "name": "Set-Cookie",
-                            "value": "cookie1=value1"
-                        },
-                        {
-                            "name": "Set-Cookie",
-                            "value": "cookie2=value2; Max-Age=3600"
-                        },
-                        {
-                            "name": "Set-Cookie",
-                            "value": "cookie3=value3; Expires=Wed, 21 Oct 2015 07:28:00 GMT"
-                        },
-                        {
-                            "name": "Set-Cookie",
-                            "value": "cookie4=value4; Domain=test.com"
-                        },
-                        {
-                            "name": "Set-Cookie",
-                            "value": "cookie5=value5; Path=/test"
-                        },
-                        {
-                            "name": "Set-Cookie",
-                            "value": "cookie6=value6; Secure"
-                        },
-                        {
-                            "name": "Set-Cookie",
-                            "value": "cookie7=value7; HttpOnly"
-                        },
-                        {
-                            "name": "Set-Cookie",
-                            "value": "cookie8=value8; Max-Age=3600; Domain=test.com; Path=/test; Secure; HttpOnly"
-                        }
-                    ],
-                    "content": {
-                        "size": 4,
-                        "mimeType": "application/octet-stream",
-                        "text": "test"
-                    },
-                    "redirectURL": "",
-                    "headersSize": 385,
-                    "bodySize": 4
-                },
-                "cache": null,
-                "timings": null,
-                "serverIPAddress": "test.com"
+              "name": "cookie1",
+              "value": "value1"
+            },
+            {
+              "name": "cookie2",
+              "value": "value2"
             }
-        ],
-        "comment": "request capture for http://test.com/test"
-    }
+          ],
+          "headers": [
+            {
+              "name": "Accept-Encoding",
+              "value": "gzip, deflate"
+            },
+            {
+              "name": "Connection",
+              "value": "close"
+            },
+            {
+              "name": "Cookie",
+              "value": "cookie1=value1; cookie2=value2"
+            },
+            {
+              "name": "Host",
+              "value": "test.com"
+            }
+          ],
+          "queryString": [],
+          "headersSize": 107,
+          "bodySize": -1
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/1.1",
+          "cookies": [
+            {
+              "name": "cookie1",
+              "value": "value1"
+            },
+            {
+              "name": "cookie2",
+              "value": "value2",
+              "expires": "2020-01-01T01:00:00Z"
+            },
+            {
+              "name": "cookie3",
+              "value": "value3",
+              "expires": "2015-10-21T07:28:00Z"
+            },
+            {
+              "name": "cookie4",
+              "value": "value4",
+              "domain": "test.com"
+            },
+            {
+              "name": "cookie5",
+              "value": "value5",
+              "path": "/test"
+            },
+            {
+              "name": "cookie6",
+              "value": "value6",
+              "secure": true
+            },
+            {
+              "name": "cookie7",
+              "value": "value7",
+              "httpOnly": true
+            },
+            {
+              "name": "cookie8",
+              "value": "value8",
+              "path": "/test",
+              "domain": "test.com",
+              "expires": "2020-01-01T01:00:00Z",
+              "httpOnly": true,
+              "secure": true
+            }
+          ],
+          "headers": [
+            {
+              "name": "Content-Length",
+              "value": "4"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/octet-stream"
+            },
+            {
+              "name": "Set-Cookie",
+              "value": "cookie1=value1"
+            },
+            {
+              "name": "Set-Cookie",
+              "value": "cookie2=value2; Max-Age=3600"
+            },
+            {
+              "name": "Set-Cookie",
+              "value": "cookie3=value3; Expires=Wed, 21 Oct 2015 07:28:00 GMT"
+            },
+            {
+              "name": "Set-Cookie",
+              "value": "cookie4=value4; Domain=test.com"
+            },
+            {
+              "name": "Set-Cookie",
+              "value": "cookie5=value5; Path=/test"
+            },
+            {
+              "name": "Set-Cookie",
+              "value": "cookie6=value6; Secure"
+            },
+            {
+              "name": "Set-Cookie",
+              "value": "cookie7=value7; HttpOnly"
+            },
+            {
+              "name": "Set-Cookie",
+              "value": "cookie8=value8; Max-Age=3600; Domain=test.com; Path=/test; Secure; HttpOnly"
+            }
+          ],
+          "content": {
+            "size": 4,
+            "mimeType": "application/octet-stream",
+            "text": "test"
+          },
+          "redirectURL": "",
+          "headersSize": 444,
+          "bodySize": 4
+        },
+        "cache": {},
+        "timings": {
+          "send": -1,
+          "wait": -1,
+          "receive": -1
+        },
+        "serverIPAddress": "test.com"
+      }
+    ],
+    "comment": "request capture for http://test.com/test"
+  }
 }

@@ -1,5 +1,5 @@
 {
-  "name": "captures basic request and response with no response header set",
+  "name": "captures no response body when not modified",
   "fields": {
     "max_capture_size": 9437184
   },
@@ -11,11 +11,7 @@
       { "key": "accept-encoding", "values": ["gzip, deflate"] },
       { "key": "connection", "values": ["close"] }
     ],
-    "response_status": -1,
-    "response_body": "test",
-    "response_headers": [
-      { "key": "content-type", "values": ["application/octet-stream"] },
-      { "key": "content-length", "values": ["4"] }
-    ]
+    "response_status": 304,
+    "response_body": "test"
   }
 }

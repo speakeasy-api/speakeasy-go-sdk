@@ -1,12 +1,21 @@
 {
-    "name": "captures basic request and response",
-    "fields": {
-        "max_capture_size": 9437184
-    },
-    "args": {
-        "method": "GET",
-        "url": "http://test.com/test",
-        "response_status": 200,
-        "response_body": "test"
-    }
+  "name": "captures basic request and response",
+  "fields": {
+    "max_capture_size": 9437184
+  },
+  "args": {
+    "method": "GET",
+    "url": "http://test.com/test",
+    "response_status": 200,
+    "response_body": "test",
+    "headers": [
+      { "key": "host", "values": ["test.com"] },
+      { "key": "accept-encoding", "values": ["gzip, deflate"] },
+      { "key": "connection", "values": ["close"] }
+    ],
+    "response_headers": [
+      { "key": "content-type", "values": ["application/octet-stream"] },
+      { "key": "content-length", "values": ["4"] }
+    ]
+  }
 }

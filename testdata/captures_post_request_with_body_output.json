@@ -1,59 +1,83 @@
 {
-    "log": {
-        "version": "1.2",
-        "creator": {
-            "name": "speakeasy-go-sdk",
-            "version": "1.1.0"
-        },
-        "entries": [
+  "log": {
+    "version": "1.2",
+    "creator": {
+      "name": "speakeasy-go-sdk",
+      "version": "1.1.2"
+    },
+    "entries": [
+      {
+        "startedDateTime": "2020-01-01T00:00:00Z",
+        "time": 1,
+        "request": {
+          "method": "POST",
+          "url": "http://test.com/test",
+          "httpVersion": "HTTP/1.1",
+          "cookies": [],
+          "headers": [
             {
-                "startedDateTime": "2020-01-01T00:00:00Z",
-                "time": 1,
-                "request": {
-                    "method": "POST",
-                    "url": "http://test.com/test",
-                    "httpVersion": "HTTP/1.1",
-                    "cookies": [],
-                    "headers": [
-                        {
-                            "name": "Content-Type",
-                            "value": "application/json"
-                        }
-                    ],
-                    "queryString": [],
-                    "postData": {
-                        "mimeType": "application/json",
-                        "params": [],
-                        "text": "{test: \"test\"}"
-                    },
-                    "headersSize": 32,
-                    "bodySize": 14
-                },
-                "response": {
-                    "status": 200,
-                    "statusText": "OK",
-                    "httpVersion": "HTTP/1.1",
-                    "cookies": [],
-                    "headers": [
-                        {
-                            "name": "Content-Type",
-                            "value": "text/plain; charset=utf-8"
-                        }
-                    ],
-                    "content": {
-                        "size": 4,
-                        "mimeType": "text/plain; charset=utf-8",
-                        "text": "test"
-                    },
-                    "redirectURL": "",
-                    "headersSize": 41,
-                    "bodySize": 4
-                },
-                "cache": null,
-                "timings": null,
-                "serverIPAddress": "test.com"
+              "name": "Accept-Encoding",
+              "value": "gzip, deflate"
+            },
+            {
+              "name": "Connection",
+              "value": "close"
+            },
+            {
+              "name": "Content-Length",
+              "value": "16"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Host",
+              "value": "test.com"
             }
-        ],
-        "comment": "request capture for http://test.com/test"
-    }
+          ],
+          "queryString": [],
+          "postData": {
+            "mimeType": "application/json",
+            "params": [],
+            "text": "{\"test\": \"test\"}"
+          },
+          "headersSize": 119,
+          "bodySize": 16
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/1.1",
+          "cookies": [],
+          "headers": [
+            {
+              "name": "Content-Length",
+              "value": "4"
+            },
+            {
+              "name": "Content-Type",
+              "value": "text/plain; charset=utf-8"
+            }
+          ],
+          "content": {
+            "size": 4,
+            "mimeType": "text/plain; charset=utf-8",
+            "text": "test"
+          },
+          "redirectURL": "",
+          "headersSize": 60,
+          "bodySize": 4
+        },
+        "cache": {},
+        "timings": {
+          "send": -1,
+          "wait": -1,
+          "receive": -1
+        },
+        "serverIPAddress": "test.com"
+      }
+    ],
+    "comment": "request capture for http://test.com/test"
+  }
 }

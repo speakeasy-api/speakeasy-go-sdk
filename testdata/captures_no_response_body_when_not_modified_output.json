@@ -7,8 +7,8 @@
     },
     "entries": [
       {
-        "startedDateTime": "2020-01-01T00:00:00.0000005Z",
-        "time": 2,
+        "startedDateTime": "2020-01-01T00:00:00Z",
+        "time": 1,
         "request": {
           "method": "GET",
           "url": "http://test.com/test",
@@ -33,28 +33,18 @@
           "bodySize": -1
         },
         "response": {
-          "status": 200,
-          "statusText": "OK",
+          "status": 304,
+          "statusText": "Not Modified",
           "httpVersion": "HTTP/1.1",
           "cookies": [],
-          "headers": [
-            {
-              "name": "Content-Length",
-              "value": "4"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/octet-stream"
-            }
-          ],
+          "headers": [],
           "content": {
-            "size": 4,
-            "mimeType": "application/octet-stream",
-            "text": "test"
+            "size": -1,
+            "mimeType": "application/octet-stream"
           },
           "redirectURL": "",
-          "headersSize": 59,
-          "bodySize": 4
+          "headersSize": 0,
+          "bodySize": 0
         },
         "cache": {},
         "timings": {
