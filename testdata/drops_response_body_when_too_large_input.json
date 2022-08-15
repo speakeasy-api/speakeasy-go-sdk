@@ -1,19 +1,24 @@
 {
-    "name": "drops response Body when too large",
-    "fields": {
-        "max_capture_size": 10
-    },
-    "args": {
-        "method": "POST",
-        "url": "http://test.com/test",
-        "headers": {
-            "Content-Type": ["application/json"]
-        },
-        "body": "{\"a\": \"b\"}",
-        "response_status": 200,
-        "response_body": "response is way too large to be captured",
-        "response_headers": {
-            "Content-Type": ["text/plain; charset=utf-8"]
-        }
-    }
+  "name": "drops response Body when too large",
+  "fields": {
+    "max_capture_size": 10
+  },
+  "args": {
+    "method": "POST",
+    "url": "http://test.com/test",
+    "headers": [
+      { "key": "content-type", "values": ["application/json"] },
+      { "key": "content-length", "values": ["10"] },
+      { "key": "host", "values": ["test.com"] },
+      { "key": "accept-encoding", "values": ["gzip, deflate"] },
+      { "key": "connection", "values": ["close"] }
+    ],
+    "body": "{\"a\": \"b\"}",
+    "response_status": 200,
+    "response_body": "response is way too large to be captured",
+    "response_headers": [
+      { "key": "content-type", "values": ["text/plain; charset=utf-8"] },
+      { "key": "content-length", "values": ["40"] }
+    ]
+  }
 }

@@ -9,6 +9,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"sort"
+	"strconv"
 	"time"
 
 	"github.com/chromedp/cdproto/har"
@@ -143,13 +145,19 @@ func (s *Speakeasy) buildHarFile(ctx context.Context, cw *captureWriter, r *http
 					Response:        s.getHarResponse(ctx, cw, r, startTime),
 					Connection:      r.URL.Port(),
 					ServerIPAddress: r.URL.Hostname(),
+					Cache:           &har.Cache{},
+					Timings: &har.Timings{
+						Send:    -1,
+						Wait:    -1,
+						Receive: -1,
+					},
 				},
 			},
 		},
 	}
 }
 
-//nolint:cyclop,funlen
+//nolint:funlen
 func (s *Speakeasy) getHarRequest(ctx context.Context, cw *captureWriter, r *http.Request) *har.Request {
 	reqHeaders := []*har.NameValuePair{}
 	for k, v := range r.Header {
@@ -157,6 +165,10 @@ func (s *Speakeasy) getHarRequest(ctx context.Context, cw *captureWriter, r *htt
 			reqHeaders = append(reqHeaders, &har.NameValuePair{Name: k, Value: vv})
 		}
 	}
+
+	sort.SliceStable(reqHeaders, func(i, j int) bool {
+		return reqHeaders[i].Name < reqHeaders[j].Name
+	})
 
 	reqQueryParams := []*har.NameValuePair{}
 
@@ -200,9 +212,14 @@ func (s *Speakeasy) getHarRequest(ctx context.Context, cw *captureWriter, r *htt
 
 		postData = &har.PostData{
 			MimeType: reqContentType,
+			Params:   []*har.Param{},
 			Text:     bodyText,
-			Params:   []*har.Param{}, // We don't parse the body here to populate this
 		}
+	}
+
+	var bodySize int64 = -1
+	if postData != nil {
+		bodySize = r.ContentLength
 	}
 
 	return &har.Request{
@@ -210,7 +227,7 @@ func (s *Speakeasy) getHarRequest(ctx context.Context, cw *captureWriter, r *htt
 		URL:         r.URL.String(),
 		Headers:     reqHeaders,
 		QueryString: reqQueryParams,
-		BodySize:    r.ContentLength,
+		BodySize:    bodySize,
 		PostData:    postData,
 		HTTPVersion: r.Proto,
 		Cookies:     reqCookies,
@@ -218,6 +235,7 @@ func (s *Speakeasy) getHarRequest(ctx context.Context, cw *captureWriter, r *htt
 	}
 }
 
+//nolint:funlen
 func (s *Speakeasy) getHarResponse(ctx context.Context, cw *captureWriter, r *http.Request, startTime time.Time) *har.Response {
 	resHeaders := []*har.NameValuePair{}
 
@@ -233,6 +251,10 @@ func (s *Speakeasy) getHarResponse(ctx context.Context, cw *captureWriter, r *ht
 		}
 	}
 
+	sort.SliceStable(resHeaders, func(i, j int) bool {
+		return resHeaders[i].Name < resHeaders[j].Name
+	})
+
 	resCookies := getHarCookies(cookieParser.Cookies(), startTime)
 
 	resContentType := cw.origResW.Header().Get("Content-Type")
@@ -240,16 +262,31 @@ func (s *Speakeasy) getHarResponse(ctx context.Context, cw *captureWriter, r *ht
 		resContentType = "application/octet-stream" // default http content type
 	}
 
-	bodyText := "--dropped--"
-	contentBodySize := 0
-	if cw.IsResValid() {
-		bodyText = cw.GetResBuffer().String()
-		contentBodySize = cw.GetResBuffer().Len()
-	}
-
-	bodySize := cw.GetResponseSize()
+	bodyText := ""
+	var bodySize int64 = -1
+	contentBodySize := -1
+	//nolint:nestif
 	if cw.GetStatus() == http.StatusNotModified {
 		bodySize = 0
+	} else {
+		if !cw.IsResValid() {
+			bodyText = "--dropped--"
+		} else {
+			bodyText = cw.GetResBuffer().String()
+			if cw.GetResBuffer().Len() > 0 {
+				contentBodySize = cw.GetResBuffer().Len()
+			}
+		}
+
+		contentLength := cw.origResW.Header().Get("Content-Length")
+		if contentLength != "" {
+			var err error
+			//nolint:gomnd
+			bodySize, err = strconv.ParseInt(contentLength, 10, 64)
+			if err != nil {
+				bodySize = -1
+			}
+		}
 	}
 
 	b := bytes.NewBuffer([]byte{})
@@ -273,7 +310,7 @@ func (s *Speakeasy) getHarResponse(ctx context.Context, cw *captureWriter, r *ht
 		},
 		RedirectURL: cw.origResW.Header().Get("Location"),
 		HeadersSize: int64(headerSize),
-		BodySize:    int64(bodySize),
+		BodySize:    bodySize,
 	}
 }
 

@@ -38,19 +38,23 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+type header struct {
+	Key    string   `json:"key"`
+	Values []string `json:"values"`
+}
 type fields struct {
 	MaxCaptureSize int `json:"max_capture_size,omitempty"`
 }
 type args struct {
-	Method           string              `json:"method"`
-	URL              string              `json:"url"`
-	Headers          map[string][]string `json:"headers"`
-	Body             string              `json:"body"`
-	RequestStartTime time.Time           `json:"request_start_time"`
-	ElapsedTime      int                 `json:"elapsed_time"`
-	ResponseStatus   int                 `json:"response_status"`
-	ResponseBody     string              `json:"response_body"`
-	ResponseHeaders  map[string][]string `json:"response_headers"`
+	Method           string    `json:"method"`
+	URL              string    `json:"url"`
+	Headers          []header  `json:"headers"`
+	Body             string    `json:"body"`
+	RequestStartTime time.Time `json:"request_start_time"`
+	ElapsedTime      int       `json:"elapsed_time"`
+	ResponseStatus   int       `json:"response_status"`
+	ResponseBody     string    `json:"response_body"`
+	ResponseHeaders  []header  `json:"response_headers"`
 }
 type test struct {
 	Name    string `json:"name"`
@@ -135,6 +139,7 @@ func TestSpeakeasy_Middleware_Capture_Success(t *testing.T) {
 
 					assert.Equal(t, testApiID, req.ApiId)
 					assert.Equal(t, testVersionID, req.VersionId)
+
 					assert.Equal(t, tt.WantHAR, req.Har)
 					captured = true
 					wg.Done()
@@ -142,9 +147,9 @@ func TestSpeakeasy_Middleware_Capture_Success(t *testing.T) {
 			})
 
 			h := sdkInstance.Middleware(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-				for k, v := range tt.Args.ResponseHeaders {
-					for _, vv := range v {
-						w.Header().Add(k, vv)
+				for _, header := range tt.Args.ResponseHeaders {
+					for _, val := range header.Values {
+						w.Header().Add(header.Key, val)
 					}
 				}
 
@@ -176,9 +181,9 @@ func TestSpeakeasy_Middleware_Capture_Success(t *testing.T) {
 			}
 			assert.NoError(t, err)
 
-			for k, v := range tt.Args.Headers {
-				for _, vv := range v {
-					req.Header.Add(k, vv)
+			for _, header := range tt.Args.Headers {
+				for _, val := range header.Values {
+					req.Header.Add(header.Key, val)
 				}
 			}
 
@@ -463,9 +468,9 @@ func TestSpeakeasy_GinMiddleware_Success(t *testing.T) {
 			r.Use(sdkInstance.GinMiddleware)
 
 			r.Any("/*path", func(ctx *gin.Context) {
-				for k, v := range tt.Args.ResponseHeaders {
-					for _, vv := range v {
-						ctx.Writer.Header().Add(k, vv)
+				for _, header := range tt.Args.ResponseHeaders {
+					for _, val := range header.Values {
+						ctx.Writer.Header().Add(header.Key, val)
 					}
 				}
 
@@ -497,9 +502,9 @@ func TestSpeakeasy_GinMiddleware_Success(t *testing.T) {
 			}
 			assert.NoError(t, err)
 
-			for k, v := range tt.Args.Headers {
-				for _, vv := range v {
-					req.Header.Add(k, vv)
+			for _, header := range tt.Args.Headers {
+				for _, val := range header.Values {
+					req.Header.Add(header.Key, val)
 				}
 			}
 
@@ -647,9 +652,9 @@ func TestSpeakeasy_EchoMiddleware_Success(t *testing.T) {
 			r.Use(sdkInstance.EchoMiddleware)
 
 			r.Any("/*", func(c echo.Context) error {
-				for k, v := range tt.Args.ResponseHeaders {
-					for _, vv := range v {
-						c.Response().Header().Add(k, vv)
+				for _, header := range tt.Args.ResponseHeaders {
+					for _, val := range header.Values {
+						c.Response().Header().Add(header.Key, val)
 					}
 				}
 
@@ -683,9 +688,9 @@ func TestSpeakeasy_EchoMiddleware_Success(t *testing.T) {
 			}
 			assert.NoError(t, err)
 
-			for k, v := range tt.Args.Headers {
-				for _, vv := range v {
-					req.Header.Add(k, vv)
+			for _, header := range tt.Args.Headers {
+				for _, val := range header.Values {
+					req.Header.Add(header.Key, val)
 				}
 			}
 

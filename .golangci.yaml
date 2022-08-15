@@ -61,5 +61,7 @@ linters-settings:
         arguments: [["API"], []]
   stylecheck:
     checks: ["all", "-ST1000", "-ST1003"]
+  cyclop:
+    max-complexity: 15
 run:
   go: "1.14"
