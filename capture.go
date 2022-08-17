@@ -1,27 +1,17 @@
 package speakeasy
 
 import (
-	"bytes"
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"io"
 	"io/ioutil"
 	"net/http"
-	"net/http/httptest"
-	"sort"
-	"strconv"
 	"time"
 
-	"github.com/chromedp/cdproto/har"
 	"github.com/speakeasy-api/speakeasy-go-sdk/internal/log"
 	"github.com/speakeasy-api/speakeasy-go-sdk/internal/pathhints"
 	"github.com/speakeasy-api/speakeasy-schemas/grpc/go/registry/ingest"
 	"go.uber.org/zap"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/metadata"
 )
 
 var maxCaptureSize = 1 * 1024 * 1024
@@ -73,12 +63,12 @@ func (s *Speakeasy) handleRequestResponseError(w http.ResponseWriter, r *http.Re
 	}
 
 	// Assuming response is done
-	go s.captureRequestResponse(cw, r, startTime, pathHint, c.customerID)
+	go s.captureRequestResponse(cw, r, startTime, pathHint, c)
 
 	return err
 }
 
-func (s *Speakeasy) captureRequestResponse(cw *captureWriter, r *http.Request, startTime time.Time, pathHint, customerID string) {
+func (s *Speakeasy) captureRequestResponse(cw *captureWriter, r *http.Request, startTime time.Time, pathHint string, c *controller) {
 	var ctx context.Context = valueOnlyContext{r.Context()}
 
 	if cw.IsReqValid() && cw.GetReqBuffer().Len() == 0 && r.Body != nil {
@@ -87,255 +77,31 @@ func (s *Speakeasy) captureRequestResponse(cw *captureWriter, r *http.Request, s
 		io.Copy(ioutil.Discard, r.Body)
 	}
 
-	opts := []grpc.DialOption{}
-
-	if s.secure {
-		//nolint: gosec
-		opts = append(opts, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})))
-	} else {
-		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	}
-
-	if s.config.GRPCDialer != nil {
-		opts = append(opts, grpc.WithContextDialer(s.config.GRPCDialer()))
-	}
-
-	conn, err := grpc.DialContext(ctx, s.serverURL, opts...)
+	harData, err := json.Marshal(s.harBuilder.buildHarFile(ctx, cw, r, startTime, c))
 	if err != nil {
-		log.From(ctx).Error("speakeasy-sdk: failed to create grpc connection", zap.Error(err))
-		return
-	}
-	defer conn.Close()
-
-	harData, err := json.Marshal(s.buildHarFile(ctx, cw, r, startTime))
-	if err != nil {
-		log.From(ctx).Error("speakeasy-sdk: failed to ingest request body", zap.Error(err))
+		log.From(ctx).Error("speakeasy-sdk: failed to create har file", zap.Error(err))
 		return
 	}
 
-	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("x-api-key", s.config.APIKey))
-
-	_, err = ingest.NewIngestServiceClient(conn).Ingest(ctx, &ingest.IngestRequest{
+	s.sendToIngest(ctx, &ingest.IngestRequest{
 		Har:        string(harData),
 		PathHint:   pathHint,
 		ApiId:      s.config.ApiID,
 		VersionId:  s.config.VersionID,
-		CustomerId: customerID,
-	})
-	if err != nil {
-		log.From(ctx).Error("speakeasy-sdk: failed to send ingest request", zap.Error(err))
-		return
-	}
-}
-
-func (s *Speakeasy) buildHarFile(ctx context.Context, cw *captureWriter, r *http.Request, startTime time.Time) *har.HAR {
-	return &har.HAR{
-		Log: &har.Log{
-			Version: "1.2",
-			Creator: &har.Creator{
-				Name:    sdkName,
-				Version: speakeasyVersion,
-			},
-			Comment: "request capture for " + r.URL.String(),
-			Entries: []*har.Entry{
-				{
-					StartedDateTime: startTime.Format(time.RFC3339Nano),
-					Time:            float64(timeSince(startTime).Milliseconds()),
-					Request:         s.getHarRequest(ctx, cw, r),
-					Response:        s.getHarResponse(ctx, cw, r, startTime),
-					Connection:      r.URL.Port(),
-					ServerIPAddress: r.URL.Hostname(),
-					Cache:           &har.Cache{},
-					Timings: &har.Timings{
-						Send:    -1,
-						Wait:    -1,
-						Receive: -1,
-					},
-				},
-			},
+		CustomerId: c.customerID,
+		//nolint:nosnakecase
+		MaskingMetadata: &ingest.IngestRequest_MaskingMetadata{
+			QueryStringMasks:         c.queryStringMasks,
+			RequestHeaderMasks:       c.requestHeaderMasks,
+			RequestCookieMasks:       c.requestCookieMasks,
+			RequestFieldMasksString:  c.requestFieldMasksString,
+			RequestFieldMasksNumber:  c.requestFieldMasksNumber,
+			ResponseHeaderMasks:      c.responseHeaderMasks,
+			ResponseCookieMasks:      c.responseCookieMasks,
+			ResponseFieldMasksString: c.responseFieldMasksString,
+			ResponseFieldMasksNumber: c.responseFieldMasksNumber,
 		},
-	}
-}
-
-//nolint:funlen
-func (s *Speakeasy) getHarRequest(ctx context.Context, cw *captureWriter, r *http.Request) *har.Request {
-	reqHeaders := []*har.NameValuePair{}
-	for k, v := range r.Header {
-		for _, vv := range v {
-			reqHeaders = append(reqHeaders, &har.NameValuePair{Name: k, Value: vv})
-		}
-	}
-
-	sort.SliceStable(reqHeaders, func(i, j int) bool {
-		return reqHeaders[i].Name < reqHeaders[j].Name
 	})
-
-	reqQueryParams := []*har.NameValuePair{}
-
-	for k, v := range r.URL.Query() {
-		for _, vv := range v {
-			reqQueryParams = append(reqQueryParams, &har.NameValuePair{Name: k, Value: vv})
-		}
-	}
-
-	reqCookies := getHarCookies(r.Cookies(), time.Time{})
-	bodyText := "--dropped--"
-	if cw.IsReqValid() {
-		bodyText = cw.GetReqBuffer().String()
-	}
-
-	hw := httptest.NewRecorder()
-
-	for k, vv := range r.Header {
-		for _, v := range vv {
-			hw.Header().Set(k, v)
-		}
-	}
-
-	b := bytes.NewBuffer([]byte{})
-	headerSize := -1
-	if err := hw.Header().Write(b); err != nil {
-		log.From(ctx).Error("speakeasy-sdk: failed to read length of request headers", zap.Error(err))
-	} else {
-		headerSize = b.Len()
-	}
-
-	var postData *har.PostData
-	if len(bodyText) > 0 {
-		reqContentType := r.Header.Get("Content-Type")
-		if reqContentType == "" {
-			reqContentType = http.DetectContentType(cw.GetReqBuffer().Bytes())
-			if reqContentType == "" {
-				reqContentType = "application/octet-stream" // default http content type
-			}
-		}
-
-		postData = &har.PostData{
-			MimeType: reqContentType,
-			Params:   []*har.Param{},
-			Text:     bodyText,
-		}
-	}
-
-	var bodySize int64 = -1
-	if postData != nil {
-		bodySize = r.ContentLength
-	}
-
-	return &har.Request{
-		Method:      r.Method,
-		URL:         r.URL.String(),
-		Headers:     reqHeaders,
-		QueryString: reqQueryParams,
-		BodySize:    bodySize,
-		PostData:    postData,
-		HTTPVersion: r.Proto,
-		Cookies:     reqCookies,
-		HeadersSize: int64(headerSize),
-	}
-}
-
-//nolint:funlen
-func (s *Speakeasy) getHarResponse(ctx context.Context, cw *captureWriter, r *http.Request, startTime time.Time) *har.Response {
-	resHeaders := []*har.NameValuePair{}
-
-	cookieParser := http.Response{Header: http.Header{}}
-
-	for k, v := range cw.origResW.Header() {
-		for _, vv := range v {
-			if k == "Set-Cookie" {
-				cookieParser.Header.Add(k, vv)
-			}
-
-			resHeaders = append(resHeaders, &har.NameValuePair{Name: k, Value: vv})
-		}
-	}
-
-	sort.SliceStable(resHeaders, func(i, j int) bool {
-		return resHeaders[i].Name < resHeaders[j].Name
-	})
-
-	resCookies := getHarCookies(cookieParser.Cookies(), startTime)
-
-	resContentType := cw.origResW.Header().Get("Content-Type")
-	if resContentType == "" {
-		resContentType = "application/octet-stream" // default http content type
-	}
-
-	bodyText := ""
-	var bodySize int64 = -1
-	contentBodySize := -1
-	//nolint:nestif
-	if cw.GetStatus() == http.StatusNotModified {
-		bodySize = 0
-	} else {
-		if !cw.IsResValid() {
-			bodyText = "--dropped--"
-		} else {
-			bodyText = cw.GetResBuffer().String()
-			if cw.GetResBuffer().Len() > 0 {
-				contentBodySize = cw.GetResBuffer().Len()
-			}
-		}
-
-		contentLength := cw.origResW.Header().Get("Content-Length")
-		if contentLength != "" {
-			var err error
-			//nolint:gomnd
-			bodySize, err = strconv.ParseInt(contentLength, 10, 64)
-			if err != nil {
-				bodySize = -1
-			}
-		}
-	}
-
-	b := bytes.NewBuffer([]byte{})
-	headerSize := -1
-	if err := cw.origResW.Header().Write(b); err != nil {
-		log.From(ctx).Error("speakeasy-sdk: failed to read length of response headers", zap.Error(err))
-	} else {
-		headerSize = b.Len()
-	}
-
-	return &har.Response{
-		Status:      int64(cw.status),
-		StatusText:  http.StatusText(cw.status),
-		HTTPVersion: r.Proto,
-		Headers:     resHeaders,
-		Cookies:     resCookies,
-		Content: &har.Content{ // we are assuming we are getting the raw response here, so if we are put in the chain such that compression or encoding happens then the response text will be unreadable
-			Size:     int64(contentBodySize),
-			MimeType: resContentType,
-			Text:     bodyText,
-		},
-		RedirectURL: cw.origResW.Header().Get("Location"),
-		HeadersSize: int64(headerSize),
-		BodySize:    bodySize,
-	}
-}
-
-func getHarCookies(cookies []*http.Cookie, startTime time.Time) []*har.Cookie {
-	harCookies := []*har.Cookie{}
-	for _, cookie := range cookies {
-		harCookie := &har.Cookie{
-			Name:     cookie.Name,
-			Value:    cookie.Value,
-			Path:     cookie.Path,
-			Domain:   cookie.Domain,
-			Secure:   cookie.Secure,
-			HTTPOnly: cookie.HttpOnly,
-		}
-
-		if cookie.MaxAge != 0 {
-			harCookie.Expires = startTime.Add(time.Duration(cookie.MaxAge) * time.Second).Format(time.RFC3339)
-		} else if (cookie.Expires != time.Time{}) {
-			harCookie.Expires = cookie.Expires.Format(time.RFC3339)
-		}
-
-		harCookies = append(harCookies, harCookie)
-	}
-
-	return harCookies
 }
 
 // This allows us to not be affected by context cancellation of the request that spawned our request capture while still retaining any context values.

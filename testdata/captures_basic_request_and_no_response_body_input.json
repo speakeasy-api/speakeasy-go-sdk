@@ -7,9 +7,9 @@
     "method": "GET",
     "url": "http://test.com:8080/test",
     "headers": [
-      { "key": "host", "values": ["test.com"] },
-      { "key": "accept-encoding", "values": ["gzip, deflate"] },
-      { "key": "connection", "values": ["close"] }
+      { "key": "Host", "values": ["test.com"] },
+      { "key": "Accept-Encoding", "values": ["gzip, deflate"] },
+      { "key": "Connection", "values": ["close"] }
     ]
   }
 }

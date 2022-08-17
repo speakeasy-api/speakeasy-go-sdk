@@ -17,3 +17,5 @@ require (
 	go.uber.org/zap v1.21.0
 	google.golang.org/grpc v1.48.0
 )
+
+replace github.com/speakeasy-api/speakeasy-schemas => ../speakeasy-schemas

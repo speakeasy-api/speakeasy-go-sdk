@@ -46,15 +46,24 @@ type fields struct {
 	MaxCaptureSize int `json:"max_capture_size,omitempty"`
 }
 type args struct {
-	Method           string    `json:"method"`
-	URL              string    `json:"url"`
-	Headers          []header  `json:"headers"`
-	Body             string    `json:"body"`
-	RequestStartTime time.Time `json:"request_start_time"`
-	ElapsedTime      int       `json:"elapsed_time"`
-	ResponseStatus   int       `json:"response_status"`
-	ResponseBody     string    `json:"response_body"`
-	ResponseHeaders  []header  `json:"response_headers"`
+	Method                   string            `json:"method"`
+	URL                      string            `json:"url"`
+	Headers                  []header          `json:"headers"`
+	Body                     string            `json:"body"`
+	RequestStartTime         time.Time         `json:"request_start_time"`
+	ElapsedTime              int               `json:"elapsed_time"`
+	ResponseStatus           int               `json:"response_status"`
+	ResponseBody             string            `json:"response_body"`
+	ResponseHeaders          []header          `json:"response_headers"`
+	QueryStringMasks         map[string]string `json:"query_string_masks"`
+	RequestHeaderMasks       map[string]string `json:"request_header_masks"`
+	RequestCookieMasks       map[string]string `json:"request_cookie_masks"`
+	RequestFieldMasksString  map[string]string `json:"request_field_masks_string"`
+	RequestFieldMasksNumber  map[string]string `json:"request_field_masks_number"`
+	ResponseHeaderMasks      map[string]string `json:"response_header_masks"`
+	ResponseCookieMasks      map[string]string `json:"response_cookie_masks"`
+	ResponseFieldMasksString map[string]string `json:"response_field_masks_string"`
+	ResponseFieldMasksNumber map[string]string `json:"response_field_masks_number"`
 }
 type test struct {
 	Name    string `json:"name"`
@@ -147,6 +156,62 @@ func TestSpeakeasy_Middleware_Capture_Success(t *testing.T) {
 			})
 
 			h := sdkInstance.Middleware(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				ctrl := speakeasy.MiddlewareController(req)
+
+				if tt.Args.QueryStringMasks != nil {
+					for k, v := range tt.Args.QueryStringMasks {
+						ctrl.Masking(speakeasy.WithQueryStringMask([]string{k}, v))
+					}
+				}
+
+				if tt.Args.RequestHeaderMasks != nil {
+					for k, v := range tt.Args.RequestHeaderMasks {
+						ctrl.Masking(speakeasy.WithRequestHeaderMask([]string{k}, v))
+					}
+				}
+
+				if tt.Args.RequestCookieMasks != nil {
+					for k, v := range tt.Args.RequestCookieMasks {
+						ctrl.Masking(speakeasy.WithRequestCookieMask([]string{k}, v))
+					}
+				}
+
+				if tt.Args.RequestFieldMasksString != nil {
+					for k, v := range tt.Args.RequestFieldMasksString {
+						ctrl.Masking(speakeasy.WithRequestFieldMaskString([]string{k}, v))
+					}
+				}
+
+				if tt.Args.RequestFieldMasksNumber != nil {
+					for k, v := range tt.Args.RequestFieldMasksNumber {
+						ctrl.Masking(speakeasy.WithRequestFieldMaskNumber([]string{k}, v))
+					}
+				}
+
+				if tt.Args.ResponseHeaderMasks != nil {
+					for k, v := range tt.Args.ResponseHeaderMasks {
+						ctrl.Masking(speakeasy.WithResponseHeaderMask([]string{k}, v))
+					}
+				}
+
+				if tt.Args.ResponseCookieMasks != nil {
+					for k, v := range tt.Args.ResponseCookieMasks {
+						ctrl.Masking(speakeasy.WithResponseCookieMask([]string{k}, v))
+					}
+				}
+
+				if tt.Args.ResponseFieldMasksString != nil {
+					for k, v := range tt.Args.ResponseFieldMasksString {
+						ctrl.Masking(speakeasy.WithResponseFieldMaskString([]string{k}, v))
+					}
+				}
+
+				if tt.Args.ResponseFieldMasksNumber != nil {
+					for k, v := range tt.Args.ResponseFieldMasksNumber {
+						ctrl.Masking(speakeasy.WithResponseFieldMaskNumber([]string{k}, v))
+					}
+				}
+
 				for _, header := range tt.Args.ResponseHeaders {
 					for _, val := range header.Values {
 						w.Header().Add(header.Key, val)
@@ -468,6 +533,62 @@ func TestSpeakeasy_GinMiddleware_Success(t *testing.T) {
 			r.Use(sdkInstance.GinMiddleware)
 
 			r.Any("/*path", func(ctx *gin.Context) {
+				ctrl := speakeasy.MiddlewareController(ctx.Request)
+
+				if tt.Args.QueryStringMasks != nil {
+					for k, v := range tt.Args.QueryStringMasks {
+						ctrl.Masking(speakeasy.WithQueryStringMask([]string{k}, v))
+					}
+				}
+
+				if tt.Args.RequestHeaderMasks != nil {
+					for k, v := range tt.Args.RequestHeaderMasks {
+						ctrl.Masking(speakeasy.WithRequestHeaderMask([]string{k}, v))
+					}
+				}
+
+				if tt.Args.RequestCookieMasks != nil {
+					for k, v := range tt.Args.RequestCookieMasks {
+						ctrl.Masking(speakeasy.WithRequestCookieMask([]string{k}, v))
+					}
+				}
+
+				if tt.Args.RequestFieldMasksString != nil {
+					for k, v := range tt.Args.RequestFieldMasksString {
+						ctrl.Masking(speakeasy.WithRequestFieldMaskString([]string{k}, v))
+					}
+				}
+
+				if tt.Args.RequestFieldMasksNumber != nil {
+					for k, v := range tt.Args.RequestFieldMasksNumber {
+						ctrl.Masking(speakeasy.WithRequestFieldMaskNumber([]string{k}, v))
+					}
+				}
+
+				if tt.Args.ResponseHeaderMasks != nil {
+					for k, v := range tt.Args.ResponseHeaderMasks {
+						ctrl.Masking(speakeasy.WithResponseHeaderMask([]string{k}, v))
+					}
+				}
+
+				if tt.Args.ResponseCookieMasks != nil {
+					for k, v := range tt.Args.ResponseCookieMasks {
+						ctrl.Masking(speakeasy.WithResponseCookieMask([]string{k}, v))
+					}
+				}
+
+				if tt.Args.ResponseFieldMasksString != nil {
+					for k, v := range tt.Args.ResponseFieldMasksString {
+						ctrl.Masking(speakeasy.WithResponseFieldMaskString([]string{k}, v))
+					}
+				}
+
+				if tt.Args.ResponseFieldMasksNumber != nil {
+					for k, v := range tt.Args.ResponseFieldMasksNumber {
+						ctrl.Masking(speakeasy.WithResponseFieldMaskNumber([]string{k}, v))
+					}
+				}
+
 				for _, header := range tt.Args.ResponseHeaders {
 					for _, val := range header.Values {
 						ctx.Writer.Header().Add(header.Key, val)
@@ -652,6 +773,62 @@ func TestSpeakeasy_EchoMiddleware_Success(t *testing.T) {
 			r.Use(sdkInstance.EchoMiddleware)
 
 			r.Any("/*", func(c echo.Context) error {
+				ctrl := speakeasy.MiddlewareController(c.Request())
+
+				if tt.Args.QueryStringMasks != nil {
+					for k, v := range tt.Args.QueryStringMasks {
+						ctrl.Masking(speakeasy.WithQueryStringMask([]string{k}, v))
+					}
+				}
+
+				if tt.Args.RequestHeaderMasks != nil {
+					for k, v := range tt.Args.RequestHeaderMasks {
+						ctrl.Masking(speakeasy.WithRequestHeaderMask([]string{k}, v))
+					}
+				}
+
+				if tt.Args.RequestCookieMasks != nil {
+					for k, v := range tt.Args.RequestCookieMasks {
+						ctrl.Masking(speakeasy.WithRequestCookieMask([]string{k}, v))
+					}
+				}
+
+				if tt.Args.RequestFieldMasksString != nil {
+					for k, v := range tt.Args.RequestFieldMasksString {
+						ctrl.Masking(speakeasy.WithRequestFieldMaskString([]string{k}, v))
+					}
+				}
+
+				if tt.Args.RequestFieldMasksNumber != nil {
+					for k, v := range tt.Args.RequestFieldMasksNumber {
+						ctrl.Masking(speakeasy.WithRequestFieldMaskNumber([]string{k}, v))
+					}
+				}
+
+				if tt.Args.ResponseHeaderMasks != nil {
+					for k, v := range tt.Args.ResponseHeaderMasks {
+						ctrl.Masking(speakeasy.WithResponseHeaderMask([]string{k}, v))
+					}
+				}
+
+				if tt.Args.ResponseCookieMasks != nil {
+					for k, v := range tt.Args.ResponseCookieMasks {
+						ctrl.Masking(speakeasy.WithResponseCookieMask([]string{k}, v))
+					}
+				}
+
+				if tt.Args.ResponseFieldMasksString != nil {
+					for k, v := range tt.Args.ResponseFieldMasksString {
+						ctrl.Masking(speakeasy.WithResponseFieldMaskString([]string{k}, v))
+					}
+				}
+
+				if tt.Args.ResponseFieldMasksNumber != nil {
+					for k, v := range tt.Args.ResponseFieldMasksNumber {
+						ctrl.Masking(speakeasy.WithResponseFieldMaskNumber([]string{k}, v))
+					}
+				}
+
 				for _, header := range tt.Args.ResponseHeaders {
 					for _, val := range header.Values {
 						c.Response().Header().Add(header.Key, val)

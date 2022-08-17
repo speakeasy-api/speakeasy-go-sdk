@@ -42,6 +42,7 @@ issues:
         - nosnakecase
         - maintidx
         - gosec
+        - gocyclo
     - path: _exports_test\.go
       linters:
         - testpackage

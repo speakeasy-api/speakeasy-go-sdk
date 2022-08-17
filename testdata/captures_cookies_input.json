@@ -7,16 +7,16 @@
     "method": "GET",
     "url": "http://test.com/test",
     "headers": [
-      { "key": "cookie", "values": ["cookie1=value1; cookie2=value2"] },
-      { "key": "host", "values": ["test.com"] },
-      { "key": "accept-encoding", "values": ["gzip, deflate"] },
-      { "key": "connection", "values": ["close"] }
+      { "key": "Cookie", "values": ["cookie1=value1; cookie2=value2"] },
+      { "key": "Host", "values": ["test.com"] },
+      { "key": "Accept-Encoding", "values": ["gzip, deflate"] },
+      { "key": "Connection", "values": ["close"] }
     ],
     "response_status": 200,
     "response_body": "test",
     "response_headers": [
       {
-        "key": "set-cookie",
+        "key": "Set-Cookie",
         "values": [
           "cookie1=value1",
           "cookie2=value2; Max-Age=3600",
@@ -28,8 +28,8 @@
           "cookie8=value8; Max-Age=3600; Domain=test.com; Path=/test; Secure; HttpOnly"
         ]
       },
-      { "key": "content-type", "values": ["application/octet-stream"] },
-      { "key": "content-length", "values": ["4"] }
+      { "key": "Content-Type", "values": ["application/octet-stream"] },
+      { "key": "Content-Length", "values": ["4"] }
     ]
   }
 }

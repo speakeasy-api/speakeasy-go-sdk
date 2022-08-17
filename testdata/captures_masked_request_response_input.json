@@ -1,0 +1,73 @@
+{
+  "name": "captures masked request and response",
+  "fields": {
+    "max_capture_size": 9437184
+  },
+  "args": {
+    "method": "POST",
+    "url": "http://test.com/test?querytest1=test1&querytest2=test2&querytest3=test3",
+    "headers": [
+      {
+        "key": "Cookie",
+        "values": ["cookie1=value1; cookie2=value2; cookie3=value3"]
+      },
+      { "key": "Content-Type", "values": ["application/json"] },
+      { "key": "Content-Length", "values": ["103"] },
+      { "key": "Host", "values": ["test.com"] },
+      { "key": "Accept-Encoding", "values": ["gzip, deflate"] },
+      { "key": "Connection", "values": ["close"] },
+      { "key": "Authorization", "values": ["Basic dXNlcjpwYXNzd29yZA=="] }
+    ],
+    "body": "{\"test\": \"test\", \"test1\": 123.456, \"address\": {\"line1\": \"line1\", \"line2\": \"line2\", \"street\": \"street\"}}",
+    "response_status": -1,
+    "response_body": "{\r\n  \"test\":\"test\",\r\n  \"test1\":123.456,\r\n  \"address\":{\r\n    \"line1\":\"line1\",\r\n    \"line2\":\"line2\",\r\n    \"street\":\"street\"\r\n  }\r\n}",
+    "response_headers": [
+      {
+        "key": "Set-Cookie",
+        "values": [
+          "cookie1=value1",
+          "cookie2=value2; Max-Age=3600",
+          "cookie3=value3"
+        ]
+      },
+      { "key": "Content-Type", "values": ["application/json"] },
+      { "key": "Content-Length", "values": ["129"] },
+      { "key": "Session", "values": ["session_data"] },
+      { "key": "X-Custom-Header", "values": ["1", "2", "3"] }
+    ],
+    "query_string_masks": {
+      "querytest2": "__masked__",
+      "querytest3": "~~~~~"
+    },
+    "request_header_masks": {
+      "Host": "__masked__",
+      "Authorization": "~~~~~"
+    },
+    "request_cookie_masks": {
+      "cookie2": "__masked__",
+      "cookie3": "~~~~~"
+    },
+    "request_field_masks_string": {
+      "line1": "__masked__",
+      "street": "~~~~~"
+    },
+    "request_field_masks_number": {
+      "test1": "-12321"
+    },
+    "response_header_masks": {
+      "Session": "~~~~~",
+      "X-Custom-Header": "__masked__"
+    },
+    "response_cookie_masks": {
+      "cookie2": "__masked__",
+      "cookie3": "~~~~~"
+    },
+    "response_field_masks_string": {
+      "line1": "__masked__",
+      "street": "~~~~~"
+    },
+    "response_field_masks_number": {
+      "test1": "-12321"
+    }
+  }
+}

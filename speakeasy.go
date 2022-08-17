@@ -27,7 +27,7 @@ const (
 )
 
 var (
-	speakeasyVersion = "1.1.2" // TODO get this from CI
+	speakeasyVersion = "1.2.0" // TODO get this from CI
 	serverURL        = "grpc.prod.speakeasyapi.dev:443"
 
 	defaultInstance *Speakeasy
@@ -54,9 +54,10 @@ type Config struct {
 // Speakeasy is the concrete type for the Speakeasy SDK.
 // Don't instantiate this directly, use Configure() or New() instead.
 type Speakeasy struct {
-	config    Config
-	serverURL string
-	secure    bool
+	config     Config
+	serverURL  string
+	secure     bool
+	harBuilder harBuilder
 }
 
 // Configure allows you to configure the default instance of the Speakeasy SDK.

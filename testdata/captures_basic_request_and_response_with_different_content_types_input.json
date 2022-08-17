@@ -7,16 +7,16 @@
     "method": "GET",
     "url": "http://test.com/test",
     "headers": [
-      { "key": "content-type", "values": ["application/json"] },
-      { "key": "host", "values": ["test.com"] },
-      { "key": "accept-encoding", "values": ["gzip, deflate"] },
-      { "key": "connection", "values": ["close"] }
+      { "key": "Content-Type", "values": ["application/json"] },
+      { "key": "Host", "values": ["test.com"] },
+      { "key": "Accept-Encoding", "values": ["gzip, deflate"] },
+      { "key": "Connection", "values": ["close"] }
     ],
     "response_status": -1,
     "response_body": "test",
     "response_headers": [
-      { "key": "content-type", "values": ["text/plain; charset=utf-8"] },
-      { "key": "content-length", "values": ["4"] }
+      { "key": "Content-Type", "values": ["text/plain; charset=utf-8"] },
+      { "key": "Content-Length", "values": ["4"] }
     ]
   }
 }
