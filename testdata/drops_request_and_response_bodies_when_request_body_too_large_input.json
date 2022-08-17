@@ -7,18 +7,18 @@
     "method": "POST",
     "url": "http://test.com/test",
     "headers": [
-      { "key": "content-type", "values": ["application/json"] },
-      { "key": "content-length", "values": ["25"] },
-      { "key": "host", "values": ["test.com"] },
-      { "key": "accept-encoding", "values": ["gzip, deflate"] },
-      { "key": "connection", "values": ["close"] }
+      { "key": "Content-Type", "values": ["application/json"] },
+      { "key": "Content-Length", "values": ["25"] },
+      { "key": "Host", "values": ["test.com"] },
+      { "key": "Accept-Encoding", "values": ["gzip, deflate"] },
+      { "key": "Connection", "values": ["close"] }
     ],
     "body": "{\"tooLarge\": \"veryLarge\"}",
     "response_status": 200,
     "response_body": "no room left for response to be captured",
     "response_headers": [
-      { "key": "content-type", "values": ["text/plain; charset=utf-8"] },
-      { "key": "content-length", "values": ["40"] }
+      { "key": "Content-Type", "values": ["text/plain; charset=utf-8"] },
+      { "key": "Content-Length", "values": ["40"] }
     ]
   }
 }

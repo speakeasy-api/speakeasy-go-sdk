@@ -40,8 +40,8 @@ func main() {
 	// Configure the Global SDK
 	speakeasy.Configure(speakeasy.Config {
 		APIKey:		"YOUR API KEY HERE",	// retrieve from Speakeasy API dashboard.
-		ApiID:		"YOUR API ID HERE", 	// custom Api ID to associate captured requests with.
-		VersionID:	"YOUR VERSION ID HERE",	// custom Version ID to associate captured requests with.
+		ApiID:		"YOUR API ID HERE", 	// this is an ID you provide that you would like to associate captured requests with.
+		VersionID:	"YOUR VERSION ID HERE",	// this is a Version you provide that you would like to associate captured requests with.
 	})
 
     // Associate the SDK's middleware with your router
@@ -63,16 +63,28 @@ The Speakeasy SDK provides both a global and per Api configuration option. If yo
 import "github.com/speakeasy-api/speakeasy-go-sdk"
 
 func main() {
-	// Configure a new instance of the SDK
-	sdkInstance := speakeasy.New(speakeasy.Config {
+	r := mux.NewRouter()
+
+	// Configure a new instance of the SDK for the store API
+	storeSDKInstance := speakeasy.New(speakeasy.Config {
 		APIKey:		"YOUR API KEY HERE",	// retrieve from Speakeasy API dashboard.
-		ApiID:		"YOUR API ID HERE", 	// custom Api ID to associate captured requests with.
-		VersionID:	"YOUR VERSION ID HERE",	// custom Version ID to associate captured requests with.
+		ApiID:		"store_api", 	   		// this is an ID you provide that you would like to associate captured requests with.
+		VersionID:	"1.0.0",				// this is a Version you provide that you would like to associate captured requests with.
 	})
 
-    // Associate the SDK's middleware with your router
-	r := mux.NewRouter()
-	r.Use(sdkInstance.Middleware)
+	// Configure a new instance of the SDK for the product API
+	productSDKInstance := speakeasy.New(speakeasy.Config {
+		APIKey:		"YOUR API KEY HERE",	// retrieve from Speakeasy API dashboard.
+		ApiID:		"product_api", 			// this is an ID you provide that you would like to associate captured requests with.
+		VersionID:	"1.0.0",				// this is a Version you provide that you would like to associate captured requests with.
+	})
+
+    // The different instances of the SDK (with differnt IDs or even versions assigned) can be used to associate requests with different APIs and Versions.
+	s := r.PathPrefix("/store").Subrouter()
+	r.Use(storeSDKInstance.Middleware)
+
+	s := r.PathPrefix("/products").Subrouter()
+	r.Use(productSDKInstance.Middleware)
 }
 ```
 
@@ -131,4 +143,53 @@ func MyHandler(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-Note: This is not required, but is highly recommended. By setting a customer ID you can easily associate requests with your customers/users in the Speakeasy Dashboard, powering filters in the Request Viewer [(Coming soon)](https://docs.speakeasyapi.dev/speakeasy-user-guide/request-viewer-coming-soon).
+Note: This is not required, but is highly recommended. By setting a customer ID you can easily associate requests with your customers/users in the Speakeasy Dashboard, powering filters in the [Request Viewer](https://docs.speakeasyapi.dev/speakeasy-user-guide/request-viewer).
+
+## Masking sensitive data
+
+Speakeasy can mask sensitive data in the query string parameters, headers, cookies and request/response bodies captured by the SDK. This is useful for maintaining sensitive data isolation, and retaining control over the data that is captured.
+
+Using the `Advanced Configuration` section above you can completely ignore certain routes by not assigning the middleware to their router, causing the SDK to not capture any requests to that router.
+
+But if you would like to be more selective you can mask certain sensitive data using our middleware controller allowing you to mask fields as needed in different handlers:
+
+```go
+func MyHandler(w http.ResponseWriter, r *http.Request) {
+	ctrl := speakeasy.MiddlewareController(req)
+	ctrl.Masking(speakeasy.WithRequestHeaderMask("Authorization")) // Mask the Authorization header in the request
+	
+	// the rest of your handlers code
+}
+```
+
+The `Masking` function takes a number of different options to mask sensitive data in the request:
+
+* `speakeasy.WithQueryStringMask` - **WithQueryStringMask** will mask the specified query strings with an optional mask string.
+* `speakeasy.WithRequestHeaderMask` - **WithRequestHeaderMask** will mask the specified request headers with an optional mask string.
+* `speakeasy.WithResponseHeaderMask` - **WithResponseHeaderMask** will mask the specified response headers with an optional mask string.
+* `speakeasy.WithRequestCookieMask` - **WithRequestCookieMask** will mask the specified request cookies with an optional mask string.
+* `speakeasy.WithResponseCookieMask` - **WithResponseCookieMask** will mask the specified response cookies with an optional mask string.
+* `speakeasy.WithRequestFieldMaskString` - **WithRequestFieldMaskString** will mask the specified request body fields with an optional mask. Supports string fields only. Matches using regex.
+* `speakeasy.WithRequestFieldMaskNumber` - **WithRequestFieldMaskNumber** will mask the specified request body fields with an optional mask. Supports number fields only. Matches using regex.
+* `speakeasy.WithResponseFieldMaskString` - **WithResponseFieldMaskString** will mask the specified response body fields with an optional mask. Supports string fields only. Matches using regex.
+* `speakeasy.WithResponseFieldMaskNumber` - **WithResponseFieldMaskNumber** will mask the specified response body fields with an optional mask. Supports number fields only. Matches using regex.
+
+Masking can also be done more globally on all routes or a selection of routes by taking advantage of middleware. Here is an example:
+
+```go
+speakeasy.Configure(speakeasy.Config {
+	APIKey:		"YOUR API KEY HERE",	// retrieve from Speakeasy API dashboard.
+	ApiID:		"YOUR API ID HERE", 	// this is an ID you provide that you would like to associate captured requests with.
+	VersionID:	"YOUR VERSION ID HERE",	// this is a Version you provide that you would like to associate captured requests with.
+})
+
+r := mux.NewRouter()
+r.Use(speakeasy.Middleware)
+r.Use(func (next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Mask the Authorization header in the request for all requests served by this middleware
+		ctrl := speakeasy.MiddlewareController(req)
+		ctrl.Masking(speakeasy.WithRequestHeaderMask("Authorization"))
+	})
+})
+```

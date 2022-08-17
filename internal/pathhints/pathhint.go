@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/speakeasy-api/speakeasy-go-sdk/internal/utils"
 )
 
 var varMatcher = regexp.MustCompile(`({(.*?:*.*?)}|:(.+?)\/|:(.*)|\*(.+)|\*)`)
@@ -11,7 +13,7 @@ var varMatcher = regexp.MustCompile(`({(.*?:*.*?)}|:(.+?)\/|:(.*)|\*(.+)|\*)`)
 // NormalizePathHint will take a path hint from the various support routers/frameworks and normalize it to the OpenAPI spec.
 func NormalizePathHint(pathHint string) string {
 	matched := false
-	out := replaceAllStringSubmatchFunc(varMatcher, pathHint, func(matches []string) string {
+	out := utils.ReplaceAllStringSubmatchFunc(varMatcher, pathHint, func(matches []string) string {
 		matched = true
 
 		var varMatch string
@@ -35,25 +37,4 @@ func NormalizePathHint(pathHint string) string {
 	}
 
 	return out
-}
-
-func replaceAllStringSubmatchFunc(re *regexp.Regexp, str string, repl func([]string) string) string {
-	result := ""
-	lastIndex := 0
-
-	for _, v := range re.FindAllSubmatchIndex([]byte(str), -1) {
-		groups := []string{}
-		for i := 0; i < len(v); i += 2 {
-			if v[i] == -1 || v[i+1] == -1 {
-				groups = append(groups, "")
-			} else {
-				groups = append(groups, str[v[i]:v[i+1]])
-			}
-		}
-
-		result += str[lastIndex:v[0]] + repl(groups)
-		lastIndex = v[1]
-	}
-
-	return result + str[lastIndex:]
 }

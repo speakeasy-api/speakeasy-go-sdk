@@ -1,0 +1,155 @@
+{
+  "log": {
+    "version": "1.2",
+    "creator": {
+      "name": "speakeasy-go-sdk",
+      "version": "1.2.0"
+    },
+    "entries": [
+      {
+        "startedDateTime": "2020-01-01T00:00:00Z",
+        "time": 1,
+        "request": {
+          "method": "POST",
+          "url": "http://test.com/test?querytest1=test1\u0026querytest2=__masked__\u0026querytest3=~~~~~",
+          "httpVersion": "HTTP/1.1",
+          "cookies": [
+            { 
+              "name": "cookie1",
+              "value": "value1"
+            },
+            { 
+              "name": "cookie2",
+              "value": "__masked__" 
+            },
+            { 
+              "name": "cookie3",
+              "value": "~~~~~"
+            }
+          ],
+          "headers": [
+            {
+              "name": "Accept-Encoding", 
+              "value": "gzip, deflate" 
+            },
+            {
+              "name": "Authorization",
+              "value": "~~~~~"
+            },
+            {
+              "name": "Connection",
+              "value": "close"
+            },
+            {
+              "name": "Content-Length",
+              "value": "103"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Cookie",
+              "value": "cookie1=value1; cookie2=value2; cookie3=value3"
+            },
+            {
+              "name": "Host",
+              "value": "__masked__"
+            }
+          ],
+          "queryString": [
+            {
+              "name": "querytest1",
+              "value": "test1"
+            },
+            {
+              "name": "querytest2",
+              "value": "__masked__"
+            },
+            {
+              "name": "querytest3",
+              "value": "~~~~~"
+            }
+          ],
+          "postData": {
+            "mimeType": "application/json",
+            "params": [],
+            "text": "{\"test\": \"test\", \"test1\": -12321, \"address\": {\"line1\": \"__masked__\", \"line2\": \"line2\", \"street\": \"~~~~~\"}}"
+          },
+          "headersSize": 219,
+          "bodySize": 103
+        },
+        "response": {
+          "status": 200,
+          "statusText": "OK",
+          "httpVersion": "HTTP/1.1",
+          "cookies": [
+            {
+              "name": "cookie1",
+              "value": "value1"
+            },
+            {
+              "name": "cookie2",
+              "value": "__masked__",
+              "expires": "2020-01-01T01:00:00Z"
+            },
+            {
+              "name": "cookie3",
+              "value": "~~~~~"
+            }
+          ],
+          "headers": [
+            {
+              "name": "Content-Length",
+              "value": "129"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Session",
+              "value": "~~~~~"
+            },
+            {
+              "name": "Set-Cookie",
+              "value": "cookie1=value1"
+            },
+            {
+              "name": "Set-Cookie",
+              "value": "cookie2=value2; Max-Age=3600"
+            },
+            {
+              "name": "Set-Cookie",
+              "value": "cookie3=value3"
+            },
+            {
+              "name": "X-Custom-Header",
+              "value": "__masked__"
+            },
+            {
+              "name": "X-Custom-Header",
+              "value": "__masked__"
+            },
+            {
+              "name": "X-Custom-Header",
+              "value": "__masked__"
+            }
+          ],
+          "content": {
+            "size": 129,
+            "mimeType": "application/json",
+            "text": "{\r\n  \"test\":\"test\",\r\n  \"test1\":-12321,\r\n  \"address\":{\r\n    \"line1\":\"__masked__\",\r\n    \"line2\":\"line2\",\r\n    \"street\":\"~~~~~\"\r\n  }\r\n}"
+          },
+          "redirectURL": "",
+          "headersSize": 234,
+          "bodySize": 129
+        },
+        "cache": {},
+        "timings": { "send": -1, "wait": -1, "receive": -1 },
+        "serverIPAddress": "test.com"
+      }
+    ],
+    "comment": "request capture for http://test.com/test?querytest1=test1\u0026querytest2=__masked__\u0026querytest3=~~~~~"
+  }
+}
