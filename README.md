@@ -147,7 +147,7 @@ Note: This is not required, but is highly recommended. By setting a customer ID 
 
 ## Masking sensitive data
 
-Speakeasy can mask sensitive data in the query string parameters, headers, cookies and request/response bodies captured by the SDK. This is useful for protecting against sensitive data leakage, and retaining control over the data that is captured.
+Speakeasy can mask sensitive data in the query string parameters, headers, cookies and request/response bodies captured by the SDK. This is useful for maintaining sensitive data isolation, and retaining control over the data that is captured.
 
 Using the `Advanced Configuration` section above you can completely ignore certain routes by not assigning the middleware to their router, causing the SDK to not capture any requests to that router.
 
