@@ -3,7 +3,7 @@
     "version": "1.2",
     "creator": {
       "name": "speakeasy-go-sdk",
-      "version": "1.2.0"
+      "version": "1.3.0"
     },
     "entries": [
       {
@@ -11,7 +11,7 @@
         "time": 1,
         "request": {
           "method": "POST",
-          "url": "http://test.com/test?querytest1=test1\u0026querytest2=__masked__\u0026querytest3=~~~~~",
+          "url": "http://test.com/test?querytest1=test1\u0026querytest2=__masked__\u0026querytest3=_____",
           "httpVersion": "HTTP/1.1",
           "cookies": [
             { 
@@ -24,7 +24,7 @@
             },
             { 
               "name": "cookie3",
-              "value": "~~~~~"
+              "value": "_____"
             }
           ],
           "headers": [
@@ -34,7 +34,7 @@
             },
             {
               "name": "Authorization",
-              "value": "~~~~~"
+              "value": "_____"
             },
             {
               "name": "Connection",
@@ -68,13 +68,13 @@
             },
             {
               "name": "querytest3",
-              "value": "~~~~~"
+              "value": "_____"
             }
           ],
           "postData": {
             "mimeType": "application/json",
             "params": [],
-            "text": "{\"test\": \"test\", \"test1\": -12321, \"address\": {\"line1\": \"__masked__\", \"line2\": \"line2\", \"street\": \"~~~~~\"}}"
+            "text": "{\"test\": \"test\", \"test1\": -12321, \"address\": {\"line1\": \"__masked__\", \"line2\": \"line2\", \"street\": \"_____\"}}"
           },
           "headersSize": 219,
           "bodySize": 103
@@ -95,7 +95,7 @@
             },
             {
               "name": "cookie3",
-              "value": "~~~~~"
+              "value": "_____"
             }
           ],
           "headers": [
@@ -105,11 +105,11 @@
             },
             {
               "name": "Content-Type",
-              "value": "application/json"
+              "value": "application/json; charset=utf-8"
             },
             {
               "name": "Session",
-              "value": "~~~~~"
+              "value": "_____"
             },
             {
               "name": "Set-Cookie",
@@ -138,11 +138,11 @@
           ],
           "content": {
             "size": 129,
-            "mimeType": "application/json",
-            "text": "{\r\n  \"test\":\"test\",\r\n  \"test1\":-12321,\r\n  \"address\":{\r\n    \"line1\":\"__masked__\",\r\n    \"line2\":\"line2\",\r\n    \"street\":\"~~~~~\"\r\n  }\r\n}"
+            "mimeType": "application/json; charset=utf-8",
+            "text": "{\r\n  \"test\":\"test\",\r\n  \"test1\":-12321,\r\n  \"address\":{\r\n    \"line1\":\"__masked__\",\r\n    \"line2\":\"line2\",\r\n    \"street\":\"_____\"\r\n  }\r\n}"
           },
           "redirectURL": "",
-          "headersSize": 234,
+          "headersSize": 249,
           "bodySize": 129
         },
         "cache": {},
@@ -150,6 +150,6 @@
         "serverIPAddress": "test.com"
       }
     ],
-    "comment": "request capture for http://test.com/test?querytest1=test1\u0026querytest2=__masked__\u0026querytest3=~~~~~"
+    "comment": "request capture for http://test.com/test?querytest1=test1\u0026querytest2=__masked__\u0026querytest3=_____"
   }
 }

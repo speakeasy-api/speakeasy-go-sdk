@@ -9,9 +9,9 @@ func (s *Speakeasy) ExportGetSpeakeasyConfig() Config {
 }
 
 func (s *Speakeasy) ExportGetSpeakeasyServerURL() string {
-	return s.serverURL
+	return s.grpcClient.serverURL
 }
 
 func (s *Speakeasy) ExportGetSpeakeasyServerSecure() bool {
-	return s.secure
+	return s.grpcClient.secure
 }

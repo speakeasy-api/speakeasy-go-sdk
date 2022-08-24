@@ -219,6 +219,7 @@ type controller struct {
 	responseCookieMasks      map[string]string
 	responseFieldMasksString map[string]string
 	responseFieldMasksNumber map[string]string
+	sdkInstance              *Speakeasy
 }
 
 // MiddlewareController will return the speakeasy middleware controller from the current request,
@@ -244,7 +245,11 @@ func (c *controller) Masking(opts ...MaskingOption) {
 	}
 }
 
-func contextWithController(ctx context.Context) (context.Context, *controller) {
+func (c *controller) GetSDKInstance() *Speakeasy {
+	return c.sdkInstance
+}
+
+func contextWithController(ctx context.Context, sdk *Speakeasy) (context.Context, *controller) {
 	c := &controller{
 		queryStringMasks:         make(map[string]string),
 		requestHeaderMasks:       make(map[string]string),
@@ -255,6 +260,7 @@ func contextWithController(ctx context.Context) (context.Context, *controller) {
 		responseCookieMasks:      make(map[string]string),
 		responseFieldMasksString: make(map[string]string),
 		responseFieldMasksNumber: make(map[string]string),
+		sdkInstance:              sdk,
 	}
 	return context.WithValue(ctx, controllerKey, c), c
 }

@@ -7,6 +7,8 @@ import (
 	"net"
 	"os"
 	"regexp"
+
+	"github.com/speakeasy-api/speakeasy-schemas/grpc/go/registry/embedaccesstoken"
 )
 
 var (
@@ -27,7 +29,7 @@ const (
 )
 
 var (
-	speakeasyVersion = "1.2.0" // TODO get this from CI
+	speakeasyVersion = "1.3.0" // TODO get this from CI
 	serverURL        = "grpc.prod.speakeasyapi.dev:443"
 
 	defaultInstance *Speakeasy
@@ -55,9 +57,8 @@ type Config struct {
 // Don't instantiate this directly, use Configure() or New() instead.
 type Speakeasy struct {
 	config     Config
-	serverURL  string
-	secure     bool
 	harBuilder harBuilder
+	grpcClient *GRPCClient
 }
 
 // Configure allows you to configure the default instance of the Speakeasy SDK.
@@ -74,6 +75,14 @@ func New(config Config) *Speakeasy {
 	s.configure(config)
 
 	return s
+}
+
+func GetEmbedAccessToken(ctx context.Context, req *embedaccesstoken.EmbedAccessTokenRequest) (string, error) {
+	return defaultInstance.GetEmbedAccessToken(ctx, req)
+}
+
+func (s *Speakeasy) GetEmbedAccessToken(ctx context.Context, req *embedaccesstoken.EmbedAccessTokenRequest) (string, error) {
+	return s.grpcClient.GetEmbedAccessToken(ctx, req)
 }
 
 func (s *Speakeasy) configure(cfg Config) {
@@ -96,10 +105,9 @@ func (s *Speakeasy) configure(cfg Config) {
 		secure = false
 	}
 
-	s.serverURL = configuredServerURL
-	s.secure = secure
-
 	s.config = cfg
+
+	s.grpcClient = newGRPCClient(s.config.APIKey, configuredServerURL, secure, s.config.GRPCDialer)
 }
 
 func mustValidateConfig(cfg Config) {
