@@ -19,6 +19,8 @@ func Middleware(next http.Handler) http.Handler {
 // Middleware setups the current instance of the SDK to start capturing requests from routers that support http.Handlers.
 // Currently only gorilla/mux, go-chi/chi routers and the http.DefaultServerMux are supported for automatically
 // capturing path hints. Otherwise path hints can be supplied by a handler through the speakeasy MiddlewareController.
+//
+//nolint:contextcheck
 func (s *Speakeasy) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		s.handleRequestResponse(w, r, next.ServeHTTP, func(r *http.Request) string {
