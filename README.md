@@ -226,7 +226,7 @@ accessToken, err := storeSDKInstance.GetEmbedAccessToken(ctx, &embedaccesstoken.
 	},
 })
 
-// Or finally if you have a handler that you would like to generate an access token from can get the SDK instance for that handler from the middleware controller and use the `GetEmbedAccessToken` function it.
+// Or finally if you have a handler that you would like to generate an access token from, you can get the SDK instance for that handler from the middleware controller and use the `GetEmbedAccessToken` function it.
 func MyHandler(w http.ResponseWriter, r *http.Request) {
 	ctrl := speakeasy.MiddlewareController(req)
 	accessToken, err := ctrl.GetSDKInstance().GetEmbedAccessToken(ctx, &embedaccesstoken.EmbedAccessTokenRequest{
