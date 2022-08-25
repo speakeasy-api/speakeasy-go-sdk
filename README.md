@@ -215,7 +215,7 @@ accessToken, err := speakeasy.GetEmbedAccessToken(ctx, &embedaccesstoken.EmbedAc
 	},
 })
 
-// If you have followed the `Advanced Configuration` section above you can also generate an access token using the `GenerateAccessToken` function the sdk instance.
+// If you have followed the `Advanced Configuration` section above you can also generate an access token using the `GenerateAccessToken` function on the sdk instance.
 accessToken, err := storeSDKInstance.GetEmbedAccessToken(ctx, &embedaccesstoken.EmbedAccessTokenRequest{
 	Filters: []*embedaccesstoken.EmbedAccessTokenRequest_Filter{
 		{
