@@ -49,7 +49,7 @@ func (s *Speakeasy) handleRequestResponseError(w http.ResponseWriter, r *http.Re
 		r.Body = ioutil.NopCloser(tee)
 	}
 
-	ctx, c := contextWithController(r.Context())
+	ctx, c := contextWithController(r.Context(), s)
 	r = r.WithContext(ctx)
 
 	err := next(cw.GetResponseWriter(), r)
@@ -83,7 +83,7 @@ func (s *Speakeasy) captureRequestResponse(cw *captureWriter, r *http.Request, s
 		return
 	}
 
-	s.sendToIngest(ctx, &ingest.IngestRequest{
+	s.grpcClient.SendToIngest(ctx, &ingest.IngestRequest{
 		Har:        string(harData),
 		PathHint:   pathHint,
 		ApiId:      s.config.ApiID,

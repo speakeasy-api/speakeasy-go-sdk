@@ -89,7 +89,7 @@ func TestWithQueryStringMask(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, c := contextWithController(context.Background())
+			_, c := contextWithController(context.Background(), nil)
 			c.Masking(WithQueryStringMask(tt.args.keys, tt.args.masks...))
 			assert.Equal(t, tt.wantQueryStringMasks, c.queryStringMasks)
 		})

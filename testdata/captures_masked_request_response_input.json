@@ -30,41 +30,41 @@
           "cookie3=value3"
         ]
       },
-      { "key": "Content-Type", "values": ["application/json"] },
+      { "key": "Content-Type", "values": ["application/json; charset=utf-8"] },
       { "key": "Content-Length", "values": ["129"] },
       { "key": "Session", "values": ["session_data"] },
       { "key": "X-Custom-Header", "values": ["1", "2", "3"] }
     ],
     "query_string_masks": {
       "querytest2": "__masked__",
-      "querytest3": "~~~~~"
+      "querytest3": "_____"
     },
     "request_header_masks": {
       "Host": "__masked__",
-      "Authorization": "~~~~~"
+      "Authorization": "_____"
     },
     "request_cookie_masks": {
       "cookie2": "__masked__",
-      "cookie3": "~~~~~"
+      "cookie3": "_____"
     },
     "request_field_masks_string": {
       "line1": "__masked__",
-      "street": "~~~~~"
+      "street": "_____"
     },
     "request_field_masks_number": {
       "test1": "-12321"
     },
     "response_header_masks": {
-      "Session": "~~~~~",
+      "Session": "_____",
       "X-Custom-Header": "__masked__"
     },
     "response_cookie_masks": {
       "cookie2": "__masked__",
-      "cookie3": "~~~~~"
+      "cookie3": "_____"
     },
     "response_field_masks_string": {
       "line1": "__masked__",
-      "street": "~~~~~"
+      "street": "_____"
     },
     "response_field_masks_number": {
       "test1": "-12321"

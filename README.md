@@ -54,7 +54,6 @@ Build and deploy your app and that's it. Your API is being tracked in the Speake
 and will be visible on the dashboard next time you log in. Visit our [docs site](https://docs.speakeasyapi.dev/) to
 learn more.
 
-
 ### Advanced configuration
 
 The Speakeasy SDK provides both a global and per Api configuration option. If you want to use the SDK to track multiple Apis or Versions from the same service you can configure individual instances of the SDK, like so:
@@ -128,8 +127,6 @@ Wildcard path matching in Echo & Chi will end up with a OpenAPI path paramater c
 
 And in the above example a path like `/user/1/path/some/sub/path` won't match but `/user/1/path/somesubpathstring` will, as `/` characters are not matched in path paramters by the OpenAPI spec.
 
-
-
 ## Capturing Customer IDs
 
 To help associate requests with customers/users of your APIs you can provide a customer ID per request handler:
@@ -192,4 +189,56 @@ r.Use(func (next http.Handler) http.Handler {
 		ctrl.Masking(speakeasy.WithRequestHeaderMask("Authorization"))
 	})
 })
+```
+
+## Embedded Request Viewer Access Tokens
+
+The Speakeasy SDK can generate access tokens for the [Embedded Request Viewer](https://docs.speakeasyapi.dev/speakeasy-user-guide/request-viewer/embedded-request-viewer) that can be used to view requests captured by the SDK.
+
+For documentation on how to configure filters, find that [HERE](https://docs.speakeasyapi.dev/speakeasy-user-guide/request-viewer/embedded-request-viewer).
+
+Below are some examples on how to generate access tokens:
+
+```go
+import "github.com/speakeasy-api/speakeasy-schemas/grpc/go/registry/embedaccesstoken"
+
+ctx := context.Background()
+
+// If the SDK is configured as a global instance, an access token can be generated using the `GenerateAccessToken` function on the speakeasy package.
+accessToken, err := speakeasy.GetEmbedAccessToken(ctx, &embedaccesstoken.EmbedAccessTokenRequest{
+	Filters: []*embedaccesstoken.EmbedAccessTokenRequest_Filter{
+		{
+			Key:   "customer_id",
+			Operator: "=",
+			Value: "a-customer-id",
+		},
+	},
+})
+
+// If you have followed the `Advanced Configuration` section above you can also generate an access token using the `GenerateAccessToken` function on the sdk instance.
+accessToken, err := storeSDKInstance.GetEmbedAccessToken(ctx, &embedaccesstoken.EmbedAccessTokenRequest{
+	Filters: []*embedaccesstoken.EmbedAccessTokenRequest_Filter{
+		{
+			Key:   "customer_id",
+			Operator: "=",
+			Value: "a-customer-id",
+		},
+	},
+})
+
+// Or finally if you have a handler that you would like to generate an access token from, you can get the SDK instance for that handler from the middleware controller and use the `GetEmbedAccessToken` function it.
+func MyHandler(w http.ResponseWriter, r *http.Request) {
+	ctrl := speakeasy.MiddlewareController(req)
+	accessToken, err := ctrl.GetSDKInstance().GetEmbedAccessToken(ctx, &embedaccesstoken.EmbedAccessTokenRequest{
+		Filters: []*embedaccesstoken.EmbedAccessTokenRequest_Filter{
+			{
+				Key:   "customer_id",
+				Operator: "=",
+				Value: "a-customer-id",
+			},
+		},
+	})
+	
+	// the rest of your handlers code
+}
 ```
