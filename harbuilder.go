@@ -5,11 +5,13 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"sort"
 	"strconv"
 	"time"
 
 	"github.com/chromedp/cdproto/har"
+	"github.com/gorilla/handlers"
 	"github.com/speakeasy-api/speakeasy-go-sdk/internal/bodymasking"
 	"github.com/speakeasy-api/speakeasy-go-sdk/internal/log"
 	"go.uber.org/zap"
@@ -18,20 +20,7 @@ import (
 type harBuilder struct{}
 
 func (h *harBuilder) buildHarFile(ctx context.Context, cw *captureWriter, r *http.Request, startTime time.Time, c *controller) *har.HAR {
-	queryParams := r.URL.Query()
-	for key, values := range queryParams {
-		queryParams.Del(key)
-
-		for _, value := range values {
-			mask, ok := c.queryStringMasks[key]
-			if ok {
-				value = mask
-			}
-
-			queryParams.Add(key, value)
-		}
-	}
-	r.URL.RawQuery = queryParams.Encode()
+	resolvedURL := getResolvedURL(r, c)
 
 	return &har.HAR{
 		Log: &har.Log{
@@ -40,15 +29,15 @@ func (h *harBuilder) buildHarFile(ctx context.Context, cw *captureWriter, r *htt
 				Name:    sdkName,
 				Version: speakeasyVersion,
 			},
-			Comment: "request capture for " + r.URL.String(),
+			Comment: "request capture for " + resolvedURL.String(),
 			Entries: []*har.Entry{
 				{
 					StartedDateTime: startTime.Format(time.RFC3339Nano),
 					Time:            float64(timeSince(startTime).Milliseconds()),
-					Request:         h.getHarRequest(ctx, cw, r, c),
+					Request:         h.getHarRequest(ctx, cw, r, c, resolvedURL),
 					Response:        h.getHarResponse(ctx, cw, r, startTime, c),
-					Connection:      r.URL.Port(),
-					ServerIPAddress: r.URL.Hostname(),
+					Connection:      resolvedURL.Port(),
+					ServerIPAddress: resolvedURL.Hostname(),
 					Cache:           &har.Cache{},
 					Timings: &har.Timings{
 						Send:    -1,
@@ -61,8 +50,50 @@ func (h *harBuilder) buildHarFile(ctx context.Context, cw *captureWriter, r *htt
 	}
 }
 
+func getResolvedURL(r *http.Request, c *controller) *url.URL {
+	var url *url.URL
+
+	// Taking advantage of Gorilla's ProxyHeaders parsing to resolve Forwarded headers
+	handlers.ProxyHeaders(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		url = r.URL
+	})).ServeHTTP(nil, r)
+
+	queryParams := url.Query()
+	for key, values := range queryParams {
+		queryParams.Del(key)
+
+		for _, value := range values {
+			mask, ok := c.queryStringMasks[key]
+			if ok {
+				value = mask
+			}
+
+			queryParams.Add(key, value)
+		}
+	}
+	url.RawQuery = queryParams.Encode()
+
+	if url.IsAbs() {
+		return url
+	}
+
+	if url.Scheme == "" {
+		if r.TLS != nil {
+			url.Scheme = "https"
+		} else {
+			url.Scheme = "http"
+		}
+	}
+
+	if url.Host == "" {
+		url.Host = r.Host
+	}
+
+	return url
+}
+
 //nolint:funlen
-func (h *harBuilder) getHarRequest(ctx context.Context, cw *captureWriter, r *http.Request, c *controller) *har.Request {
+func (h *harBuilder) getHarRequest(ctx context.Context, cw *captureWriter, r *http.Request, c *controller, url *url.URL) *har.Request {
 	reqHeaders := []*har.NameValuePair{}
 	for key, headers := range r.Header {
 		for _, headerValue := range headers {
@@ -123,7 +154,7 @@ func (h *harBuilder) getHarRequest(ctx context.Context, cw *captureWriter, r *ht
 
 	return &har.Request{
 		Method:      r.Method,
-		URL:         r.URL.String(),
+		URL:         url.String(),
 		Headers:     reqHeaders,
 		QueryString: reqQueryParams,
 		BodySize:    bodySize,

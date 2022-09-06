@@ -11,6 +11,7 @@ require (
 	github.com/AlekSi/pointer v1.2.0
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-chi/chi/v5 v5.0.7
+	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
 	github.com/labstack/echo/v4 v4.7.2
 	github.com/speakeasy-api/speakeasy-schemas v1.3.0
