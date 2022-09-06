@@ -3,6 +3,7 @@ package speakeasy_test
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"io/ioutil"
 	"log"
@@ -16,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/chromedp/cdproto/har"
 	"github.com/gin-gonic/gin"
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/mux"
@@ -265,6 +267,127 @@ func TestSpeakeasy_Middleware_Capture_Success(t *testing.T) {
 			}
 
 			assert.Equal(t, responseStatus, w.Code)
+		})
+	}
+}
+
+func TestSpeakeasy_Middleware_URL_Resolve_Success(t *testing.T) {
+	type args struct {
+		url     string
+		headers map[string]string
+		host    string
+		https   bool
+	}
+	tests := []struct {
+		name            string
+		args            args
+		wantResolvedURL string
+	}{
+		{
+			name: "successfully resolves relative URL",
+			args: args{
+				url:  "/v1/users",
+				host: "localhost:8080",
+			},
+			wantResolvedURL: "http://localhost:8080/v1/users",
+		},
+		{
+			name: "successfully resolves relative HTTPS URL",
+			args: args{
+				url:   "/v1/users",
+				host:  "localhost:8080",
+				https: true,
+			},
+			wantResolvedURL: "https://localhost:8080/v1/users",
+		},
+		{
+			name: "successfully resolves absolute URL",
+			args: args{
+				url: "https://localhost:8080/v1/users",
+			},
+			wantResolvedURL: "https://localhost:8080/v1/users",
+		},
+		{
+			name: "successfully resolves relative URL behind proxy",
+			args: args{
+				url:  "/v1/users",
+				host: "localhost:8080",
+				headers: map[string]string{
+					"X-Forwarded-Host":  "dev.speakeasyapi.dev",
+					"X-Forwarded-Proto": "https",
+				},
+			},
+			wantResolvedURL: "https://dev.speakeasyapi.dev/v1/users",
+		},
+		{
+			name: "successfully resolves absolute URL behind proxy",
+			args: args{
+				url: "http://10.0.0.1:8080/v1/users",
+				headers: map[string]string{
+					"X-Forwarded-Host":  "dev.speakeasyapi.dev",
+					"X-Forwarded-Proto": "https",
+				},
+			},
+			wantResolvedURL: "https://dev.speakeasyapi.dev/v1/users",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			captured := false
+			handled := false
+
+			speakeasy.ExportSetTimeNow(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC))
+			speakeasy.ExportSetTimeSince(1 * time.Millisecond)
+
+			wg := &sync.WaitGroup{}
+			wg.Add(1)
+
+			sdkInstance := speakeasy.New(speakeasy.Config{
+				APIKey:    testAPIKey,
+				ApiID:     testApiID,
+				VersionID: testVersionID,
+				GRPCDialer: dialer(func(ctx context.Context, req *ingest.IngestRequest) {
+					var h har.HAR
+
+					err := json.Unmarshal([]byte(req.GetHar()), &h)
+					require.NoError(t, err)
+
+					assert.Equal(t, tt.wantResolvedURL, h.Log.Entries[0].Request.URL)
+					captured = true
+					wg.Done()
+				}),
+			})
+
+			r := mux.NewRouter()
+			r.Use(sdkInstance.Middleware)
+
+			r.Methods(http.MethodGet).Path("/v1/users").HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				handled = true
+			})
+
+			w := httptest.NewRecorder()
+
+			req, err := http.NewRequest(http.MethodGet, tt.args.url, nil)
+			assert.NoError(t, err)
+
+			if tt.args.host != "" {
+				req.Host = tt.args.host
+			}
+			for k, v := range tt.args.headers {
+				req.Header.Add(k, v)
+			}
+			if tt.args.https {
+				req.TLS = &tls.ConnectionState{}
+			}
+
+			r.ServeHTTP(w, req)
+
+			wg.Wait()
+
+			assert.True(t, handled, "middleware did not call handler")
+			assert.True(t, captured, "middleware did not capture request")
+			assert.Equal(t, http.StatusOK, w.Code)
 		})
 	}
 }
