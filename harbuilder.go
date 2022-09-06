@@ -51,12 +51,14 @@ func (h *harBuilder) buildHarFile(ctx context.Context, cw *captureWriter, r *htt
 }
 
 func getResolvedURL(r *http.Request, c *controller) *url.URL {
-	var url *url.URL
+	req := *r
 
 	// Taking advantage of Gorilla's ProxyHeaders parsing to resolve Forwarded headers
 	handlers.ProxyHeaders(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		url = r.URL
-	})).ServeHTTP(nil, r)
+		req = *r
+	})).ServeHTTP(nil, &req)
+
+	url := req.URL
 
 	queryParams := url.Query()
 	for key, values := range queryParams {
@@ -73,20 +75,20 @@ func getResolvedURL(r *http.Request, c *controller) *url.URL {
 	}
 	url.RawQuery = queryParams.Encode()
 
-	if url.IsAbs() {
-		return url
-	}
-
 	if url.Scheme == "" {
-		if r.TLS != nil {
+		if req.TLS != nil {
 			url.Scheme = "https"
 		} else {
 			url.Scheme = "http"
 		}
 	}
 
-	if url.Host == "" {
-		url.Host = r.Host
+	if url.Host == "" || url.Host != req.Host {
+		url.Host = req.Host
+	}
+
+	if url.IsAbs() {
+		return url
 	}
 
 	return url
