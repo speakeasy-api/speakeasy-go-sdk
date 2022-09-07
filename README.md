@@ -40,8 +40,12 @@ func main() {
 	// Configure the Global SDK
 	speakeasy.Configure(speakeasy.Config {
 		APIKey:		"YOUR API KEY HERE",	// retrieve from Speakeasy API dashboard.
-		ApiID:		"YOUR API ID HERE", 	// enter a name that you'd like to associate captured requests with. This name will show up in the Speakeasy dashboard. e.g. "PetStore" might be a good ApiID for a Pet Store's API. No spaces allowed.
-		VersionID:	"YOUR VERSION ID HERE",	// enter a version that you would like to associate captured requests with. The combination of ApiID (name) and VersionID will uniquely identify your requests in the Speakeasy Dashboard. e.g. "v1.0.0". You can have multiple versions for the same ApiID (if running multiple versions of your API)
+		ApiID:		"YOUR API ID HERE", 	// enter a name that you'd like to associate captured requests with.
+        // This name will show up in the Speakeasy dashboard. e.g. "PetStore" might be a good ApiID for a Pet Store's API.
+        // No spaces allowed.
+		VersionID:	"YOUR VERSION ID HERE",	// enter a version that you would like to associate captured requests with.
+        // The combination of ApiID (name) and VersionID will uniquely identify your requests in the Speakeasy Dashboard.
+        // e.g. "v1.0.0". You can have multiple versions for the same ApiID (if running multiple versions of your API)
 	})
 
     // Associate the SDK's middleware with your router
