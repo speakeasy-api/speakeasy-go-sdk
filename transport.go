@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"net"
+	"time"
 
 	"github.com/speakeasy-api/speakeasy-go-sdk/internal/log"
 	"github.com/speakeasy-api/speakeasy-schemas/grpc/go/registry/embedaccesstoken"
@@ -14,6 +15,8 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 )
+
+var GRPCIngestTimeout = 1 * time.Second
 
 type DialerFunc func() func(context.Context, string) (net.Conn, error)
 
@@ -34,6 +37,9 @@ func newGRPCClient(apiKey, serverURL string, secure bool, grpcDialer DialerFunc)
 }
 
 func (c *GRPCClient) SendToIngest(ctx context.Context, req *ingest.IngestRequest) {
+	ctx, cancel := context.WithTimeout(ctx, GRPCIngestTimeout)
+	defer cancel()
+
 	conn, err := c.getConn(ctx)
 	if err != nil {
 		log.From(ctx).Error("speakeasy-sdk: failed to create grpc connection", zap.Error(err))
