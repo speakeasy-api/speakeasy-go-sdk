@@ -74,12 +74,14 @@ func (c *GRPCClient) GetEmbedAccessToken(ctx context.Context, req *embedaccessto
 	return res.AccessToken, nil
 }
 
-func (c *GRPCClient) getConn(ctx context.Context) (*grpc.ClientConn, error) {
+func (c *GRPCClient) getConn(_ context.Context) (*grpc.ClientConn, error) {
 	// TODO: when the interface of the speakeasy middleware instantiation is changed to enable an error to be propagated
 	//       to the callee, create the connection inline with the middleware instantiation.
 	c.Lock()
 	defer c.Unlock()
 	if c.conn == nil {
+		// explicitly in background
+		//nolint:contextCheck
 		conn, err := createConn(context.Background(), c.secure, c.serverURL, c.grpcDialer)
 		if err != nil {
 			return nil, err

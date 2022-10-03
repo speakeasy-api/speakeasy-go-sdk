@@ -38,6 +38,7 @@ func (s *Speakeasy) handleRequestResponse(w http.ResponseWriter, r *http.Request
 }
 
 func (s *Speakeasy) handleRequestResponseError(w http.ResponseWriter, r *http.Request, next handlerFunc, capturePathHint func(r *http.Request) string) error {
+	//nolint:ifshort
 	startTime := timeNow()
 
 	cw := NewCaptureWriter(w, maxCaptureSize)
