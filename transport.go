@@ -76,7 +76,7 @@ func (c *GRPCClient) GetEmbedAccessToken(ctx context.Context, req *embedaccessto
 
 func (c *GRPCClient) getConn(ctx context.Context) (*grpc.ClientConn, error) {
 	// TODO: when the interface of the speakeasy middleware instantiation is changed to enable an error to be propagated
-	//       to the caller client, create the connection inline with the middleware instantiation.
+	//       to the callee, create the connection inline with the middleware instantiation.
 	c.Lock()
 	defer c.Unlock()
 	if c.conn == nil {
