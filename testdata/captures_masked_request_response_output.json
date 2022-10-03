@@ -3,7 +3,7 @@
     "version": "1.2",
     "creator": {
       "name": "speakeasy-go-sdk",
-      "version": "1.3.4"
+      "version": "1.4.0"
     },
     "entries": [
       {
@@ -14,23 +14,23 @@
           "url": "http://test.com/test?querytest1=test1\u0026querytest2=__masked__\u0026querytest3=_____",
           "httpVersion": "HTTP/1.1",
           "cookies": [
-            { 
+            {
               "name": "cookie1",
               "value": "value1"
             },
-            { 
+            {
               "name": "cookie2",
-              "value": "__masked__" 
+              "value": "__masked__"
             },
-            { 
+            {
               "name": "cookie3",
               "value": "_____"
             }
           ],
           "headers": [
             {
-              "name": "Accept-Encoding", 
-              "value": "gzip, deflate" 
+              "name": "Accept-Encoding",
+              "value": "gzip, deflate"
             },
             {
               "name": "Authorization",
