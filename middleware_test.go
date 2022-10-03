@@ -151,7 +151,7 @@ func TestSpeakeasy_Middleware_Capture_Success(t *testing.T) {
 					assert.Equal(t, testApiID, req.ApiId)
 					assert.Equal(t, testVersionID, req.VersionId)
 
-					assert.Equal(t, tt.WantHAR, req.Har)
+					assert.JSONEq(t, tt.WantHAR, req.Har)
 					captured = true
 					wg.Done()
 				}),
@@ -646,7 +646,7 @@ func TestSpeakeasy_GinMiddleware_Success(t *testing.T) {
 				ApiID:     testApiID,
 				VersionID: testVersionID,
 				GRPCDialer: dialer(func(ctx context.Context, req *ingest.IngestRequest) {
-					assert.Equal(t, tt.WantHAR, req.Har)
+					assert.JSONEq(t, tt.WantHAR, req.Har)
 					captured = true
 					wg.Done()
 				}),
@@ -886,7 +886,7 @@ func TestSpeakeasy_EchoMiddleware_Success(t *testing.T) {
 				ApiID:     testApiID,
 				VersionID: testVersionID,
 				GRPCDialer: dialer(func(ctx context.Context, req *ingest.IngestRequest) {
-					assert.Equal(t, tt.WantHAR, req.Har)
+					assert.JSONEq(t, tt.WantHAR, req.Har)
 					captured = true
 					wg.Done()
 				}),

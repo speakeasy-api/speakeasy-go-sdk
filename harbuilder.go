@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"net/http"
-	"net/http/httptest"
 	"net/url"
 	"sort"
 	"strconv"
@@ -131,17 +130,9 @@ func (h *harBuilder) getHarRequest(ctx context.Context, cw *captureWriter, r *ht
 
 	reqCookies := getHarCookies(r.Cookies(), time.Time{}, c.requestCookieMasks)
 
-	hw := httptest.NewRecorder()
-
-	for k, vv := range r.Header {
-		for _, v := range vv {
-			hw.Header().Set(k, v)
-		}
-	}
-
 	b := bytes.NewBuffer([]byte{})
 	headerSize := -1
-	if err := hw.Header().Write(b); err != nil {
+	if err := r.Header.Write(b); err != nil {
 		log.From(ctx).Error("speakeasy-sdk: failed to read length of request headers", zap.Error(err))
 	} else {
 		headerSize = b.Len()
