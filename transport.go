@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/speakeasy-api/speakeasy-go-sdk/internal/log"
@@ -21,18 +22,19 @@ var GRPCIngestTimeout = 1 * time.Second
 type DialerFunc func() func(context.Context, string) (net.Conn, error)
 
 type GRPCClient struct {
+	sync.Mutex
 	apiKey     string
 	serverURL  string
 	secure     bool
 	grpcDialer DialerFunc
+	conn       *grpc.ClientConn
 }
 
 func newGRPCClient(apiKey, serverURL string, secure bool, grpcDialer DialerFunc) *GRPCClient {
 	return &GRPCClient{
-		apiKey:     apiKey,
-		serverURL:  serverURL,
-		secure:     secure,
-		grpcDialer: grpcDialer,
+		apiKey:    apiKey,
+		serverURL: serverURL,
+		secure:    secure,
 	}
 }
 
@@ -45,7 +47,6 @@ func (c *GRPCClient) SendToIngest(ctx context.Context, req *ingest.IngestRequest
 		log.From(ctx).Error("speakeasy-sdk: failed to create grpc connection", zap.Error(err))
 		return
 	}
-	defer conn.Close()
 
 	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("x-api-key", c.apiKey))
 
@@ -61,7 +62,6 @@ func (c *GRPCClient) GetEmbedAccessToken(ctx context.Context, req *embedaccessto
 	if err != nil {
 		return "", err
 	}
-	defer conn.Close()
 
 	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("x-api-key", c.apiKey))
 
@@ -74,9 +74,22 @@ func (c *GRPCClient) GetEmbedAccessToken(ctx context.Context, req *embedaccessto
 }
 
 func (c *GRPCClient) getConn(ctx context.Context) (*grpc.ClientConn, error) {
+	c.Lock()
+	defer c.Unlock()
+	if c.conn == nil {
+		conn, err := createConn(context.Background(), c.secure, c.serverURL, c.grpcDialer)
+		if err != nil {
+			return nil, err
+		}
+		c.conn = conn
+	}
+	return c.conn, nil
+}
+
+func createConn(ctx context.Context, secure bool, serverURL string, grpcDialer DialerFunc) (*grpc.ClientConn, error) {
 	opts := []grpc.DialOption{}
 
-	if c.secure {
+	if secure {
 		opts = append(opts, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{
 			MinVersion: tls.VersionTLS12,
 		})))
@@ -84,11 +97,11 @@ func (c *GRPCClient) getConn(ctx context.Context) (*grpc.ClientConn, error) {
 		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
 
-	if c.grpcDialer != nil {
-		opts = append(opts, grpc.WithContextDialer(c.grpcDialer()))
+	if grpcDialer != nil {
+		opts = append(opts, grpc.WithContextDialer(grpcDialer()))
 	}
 
-	conn, err := grpc.DialContext(ctx, c.serverURL, opts...)
+	conn, err := grpc.DialContext(ctx, serverURL, opts...)
 	if err != nil {
 		return nil, err
 	}
