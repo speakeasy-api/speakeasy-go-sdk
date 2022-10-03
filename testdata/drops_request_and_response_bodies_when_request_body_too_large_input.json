@@ -8,12 +8,12 @@
     "url": "http://test.com/test",
     "headers": [
       { "key": "Content-Type", "values": ["application/json"] },
-      { "key": "Content-Length", "values": ["25"] },
+      { "key": "Content-Length", "values": ["24"] },
       { "key": "Host", "values": ["test.com"] },
       { "key": "Accept-Encoding", "values": ["gzip, deflate"] },
       { "key": "Connection", "values": ["close"] }
     ],
-    "body": "{\"tooLarge\": \"veryLarge\"}",
+    "body": "{\"tooLarge\":\"veryLarge\"}",
     "response_status": 200,
     "response_body": "no room left for response to be captured",
     "response_headers": [

@@ -1,0 +1,48 @@
+{
+  "name": "captures basic request and response with repeat headers",
+  "fields": {
+    "max_capture_size": 9437184
+  },
+  "args": {
+    "method": "GET",
+    "url": "http://test.com/test",
+    "response_status": 200,
+    "response_body": "test",
+    "headers": [
+      {
+        "key": "Vary",
+        "values": ["Origin"]
+      },
+      {
+        "key": "Vary",
+        "values": ["Access-Control-Request-Method"]
+      },
+      {
+        "key": "Vary",
+        "values": ["Access-Control-Request-Headers"]
+      }
+    ],
+    "response_headers": [
+      {
+        "key": "Vary",
+        "values": ["Origin"]
+      },
+      {
+        "key": "Vary",
+        "values": ["Access-Control-Request-Method"]
+      },
+      {
+        "key": "Vary",
+        "values": ["Access-Control-Request-Headers"]
+      },
+      {
+        "key": "Content-Type",
+        "values": ["application/octet-stream"]
+      },
+      {
+        "key": "Content-Length",
+        "values": ["4"]
+      }
+    ]
+  }
+}
