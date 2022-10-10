@@ -74,6 +74,7 @@ func (s *Speakeasy) handleRequestResponseError(w http.ResponseWriter, r *http.Re
 	return err
 }
 
+//nolint:nolintlint,contextcheck
 func (s *Speakeasy) captureRequestResponse(cw *captureWriter, r *http.Request, startTime time.Time, pathHint string, c *controller) {
 	var ctx context.Context = valueOnlyContext{r.Context()}
 
