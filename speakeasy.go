@@ -29,7 +29,7 @@ const (
 )
 
 var (
-	speakeasyVersion = "1.3.4" // TODO get this from CI
+	speakeasyVersion = "1.5.0" // TODO get this from CI
 	serverURL        = "grpc.prod.speakeasyapi.dev:443"
 
 	defaultInstance *Speakeasy
@@ -63,29 +63,39 @@ type Speakeasy struct {
 
 // Configure allows you to configure the default instance of the Speakeasy SDK.
 // Use this if you will use the same API Key for all connected APIs.
-func Configure(config Config) {
-	defaultInstance = New(config)
+func Configure(config Config) error {
+	globalInstance, err := New(config)
+	defaultInstance = globalInstance
+	return err
 }
 
 // New creates a new instance of the Speakeasy SDK.
 // This allows you to create multiple instances of the SDK
 // for specifying different API Keys for different APIs.
-func New(config Config) *Speakeasy {
+func New(config Config) (*Speakeasy, error) {
 	s := &Speakeasy{}
-	s.configure(config)
+	err := s.configure(config)
 
-	return s
+	return s, err
 }
 
 func GetEmbedAccessToken(ctx context.Context, req *embedaccesstoken.EmbedAccessTokenRequest) (string, error) {
 	return defaultInstance.GetEmbedAccessToken(ctx, req)
 }
 
+func Close() error {
+	return defaultInstance.Close()
+}
+
 func (s *Speakeasy) GetEmbedAccessToken(ctx context.Context, req *embedaccesstoken.EmbedAccessTokenRequest) (string, error) {
 	return s.grpcClient.GetEmbedAccessToken(ctx, req)
 }
 
-func (s *Speakeasy) configure(cfg Config) {
+func (s *Speakeasy) Close() error {
+	return s.grpcClient.conn.Close()
+}
+
+func (s *Speakeasy) configure(cfg Config) error {
 	mustValidateConfig(cfg)
 
 	// The below environment variables allow the overriding of the location of the ingest server.
@@ -107,7 +117,9 @@ func (s *Speakeasy) configure(cfg Config) {
 
 	s.config = cfg
 
-	s.grpcClient = newGRPCClient(s.config.APIKey, configuredServerURL, secure, s.config.GRPCDialer)
+	grpcClient, err := newGRPCClient(context.Background(), s.config.APIKey, configuredServerURL, secure, s.config.GRPCDialer)
+	s.grpcClient = grpcClient
+	return err
 }
 
 func mustValidateConfig(cfg Config) {

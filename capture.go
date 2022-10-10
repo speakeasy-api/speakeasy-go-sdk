@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/speakeasy-api/speakeasy-go-sdk/internal/log"
@@ -37,6 +38,7 @@ func (s *Speakeasy) handleRequestResponse(w http.ResponseWriter, r *http.Request
 }
 
 func (s *Speakeasy) handleRequestResponseError(w http.ResponseWriter, r *http.Request, next handlerFunc, capturePathHint func(r *http.Request) string) error {
+	//nolint:ifshort
 	startTime := timeNow()
 
 	cw := NewCaptureWriter(w, maxCaptureSize)
@@ -62,12 +64,17 @@ func (s *Speakeasy) handleRequestResponseError(w http.ResponseWriter, r *http.Re
 		pathHint = c.pathHint
 	}
 
-	// Assuming response is done
-	go s.captureRequestResponse(cw, r, startTime, pathHint, c)
-
+	// Used for load testing: set this to true and the capture GRPC call is invoked inline.
+	// This will cause the endpoint latency to be added to the GRPC request/response latency
+	if os.Getenv("SPEAKEASY_SDK_CAPTURE_INLINE") == "true" {
+		s.captureRequestResponse(cw, r, startTime, pathHint, c)
+	} else {
+		go s.captureRequestResponse(cw, r, startTime, pathHint, c)
+	}
 	return err
 }
 
+//nolint:nolintlint,contextcheck
 func (s *Speakeasy) captureRequestResponse(cw *captureWriter, r *http.Request, startTime time.Time, pathHint string, c *controller) {
 	var ctx context.Context = valueOnlyContext{r.Context()}
 

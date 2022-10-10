@@ -137,7 +137,7 @@ func TestSpeakeasy_Middleware_Capture_Success(t *testing.T) {
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
 
-			sdkInstance := speakeasy.New(speakeasy.Config{
+			sdkInstance, err := speakeasy.New(speakeasy.Config{
 				APIKey:    testAPIKey,
 				ApiID:     testApiID,
 				VersionID: testVersionID,
@@ -156,6 +156,7 @@ func TestSpeakeasy_Middleware_Capture_Success(t *testing.T) {
 					wg.Done()
 				}),
 			})
+			assert.Nil(t, err)
 
 			h := sdkInstance.Middleware(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 				ctrl := speakeasy.MiddlewareController(req)
@@ -240,7 +241,6 @@ func TestSpeakeasy_Middleware_Capture_Success(t *testing.T) {
 			w := httptest.NewRecorder()
 
 			var req *http.Request
-			var err error
 			if tt.Args.Body == "" {
 				req, err = http.NewRequest(tt.Args.Method, tt.Args.URL, nil)
 			} else {
@@ -342,7 +342,7 @@ func TestSpeakeasy_Middleware_URL_Resolve_Success(t *testing.T) {
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
 
-			sdkInstance := speakeasy.New(speakeasy.Config{
+			sdkInstance, err := speakeasy.New(speakeasy.Config{
 				APIKey:    testAPIKey,
 				ApiID:     testApiID,
 				VersionID: testVersionID,
@@ -357,6 +357,7 @@ func TestSpeakeasy_Middleware_URL_Resolve_Success(t *testing.T) {
 					wg.Done()
 				}),
 			})
+			assert.Nil(t, err)
 
 			r := mux.NewRouter()
 			r.Use(sdkInstance.Middleware)
@@ -440,7 +441,7 @@ func TestSpeakeasy_Middleware_GorillaMux_PathHint_Success(t *testing.T) {
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
 
-			sdkInstance := speakeasy.New(speakeasy.Config{
+			sdkInstance, err := speakeasy.New(speakeasy.Config{
 				APIKey:    testAPIKey,
 				ApiID:     testApiID,
 				VersionID: testVersionID,
@@ -450,6 +451,7 @@ func TestSpeakeasy_Middleware_GorillaMux_PathHint_Success(t *testing.T) {
 					wg.Done()
 				}),
 			})
+			assert.Nil(t, err)
 
 			r := mux.NewRouter()
 			r.Use(sdkInstance.Middleware)
@@ -519,7 +521,7 @@ func TestSpeakeasy_Middleware_Chi_PathHint_Success(t *testing.T) {
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
 
-			sdkInstance := speakeasy.New(speakeasy.Config{
+			sdkInstance, err := speakeasy.New(speakeasy.Config{
 				APIKey:    testAPIKey,
 				ApiID:     testApiID,
 				VersionID: testVersionID,
@@ -529,6 +531,7 @@ func TestSpeakeasy_Middleware_Chi_PathHint_Success(t *testing.T) {
 					wg.Done()
 				}),
 			})
+			assert.Nil(t, err)
 
 			r := chi.NewRouter()
 			r.Use(sdkInstance.Middleware)
@@ -584,7 +587,7 @@ func TestSpeakeasy_Middleware_ServerMux_PathHint_Success(t *testing.T) {
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
 
-			sdkInstance := speakeasy.New(speakeasy.Config{
+			sdkInstance, err := speakeasy.New(speakeasy.Config{
 				APIKey:    testAPIKey,
 				ApiID:     testApiID,
 				VersionID: testVersionID,
@@ -594,6 +597,7 @@ func TestSpeakeasy_Middleware_ServerMux_PathHint_Success(t *testing.T) {
 					wg.Done()
 				}),
 			})
+			assert.Nil(t, err)
 
 			r := http.DefaultServeMux
 
@@ -641,7 +645,7 @@ func TestSpeakeasy_GinMiddleware_Success(t *testing.T) {
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
 
-			sdkInstance := speakeasy.New(speakeasy.Config{
+			sdkInstance, err := speakeasy.New(speakeasy.Config{
 				APIKey:    testAPIKey,
 				ApiID:     testApiID,
 				VersionID: testVersionID,
@@ -651,6 +655,7 @@ func TestSpeakeasy_GinMiddleware_Success(t *testing.T) {
 					wg.Done()
 				}),
 			})
+			assert.Nil(t, err)
 
 			r := gin.Default()
 			r.Use(sdkInstance.GinMiddleware)
@@ -738,7 +743,6 @@ func TestSpeakeasy_GinMiddleware_Success(t *testing.T) {
 			w := httptest.NewRecorder()
 
 			var req *http.Request
-			var err error
 			if tt.Args.Body == "" {
 				req, err = http.NewRequest(tt.Args.Method, tt.Args.URL, nil)
 			} else {
@@ -817,7 +821,7 @@ func TestSpeakeasy_GinMiddleware_PathHint_Success(t *testing.T) {
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
 
-			sdkInstance := speakeasy.New(speakeasy.Config{
+			sdkInstance, err := speakeasy.New(speakeasy.Config{
 				APIKey:    testAPIKey,
 				ApiID:     testApiID,
 				VersionID: testVersionID,
@@ -827,6 +831,7 @@ func TestSpeakeasy_GinMiddleware_PathHint_Success(t *testing.T) {
 					wg.Done()
 				}),
 			})
+			assert.Nil(t, err)
 
 			r := gin.Default()
 			r.Use(sdkInstance.GinMiddleware)
@@ -881,7 +886,7 @@ func TestSpeakeasy_EchoMiddleware_Success(t *testing.T) {
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
 
-			sdkInstance := speakeasy.New(speakeasy.Config{
+			sdkInstance, err := speakeasy.New(speakeasy.Config{
 				APIKey:    testAPIKey,
 				ApiID:     testApiID,
 				VersionID: testVersionID,
@@ -891,6 +896,7 @@ func TestSpeakeasy_EchoMiddleware_Success(t *testing.T) {
 					wg.Done()
 				}),
 			})
+			assert.Nil(t, err)
 
 			r := echo.New()
 			r.Use(sdkInstance.EchoMiddleware)
@@ -980,7 +986,6 @@ func TestSpeakeasy_EchoMiddleware_Success(t *testing.T) {
 			w := httptest.NewRecorder()
 
 			var req *http.Request
-			var err error
 			if tt.Args.Body == "" {
 				req, err = http.NewRequest(tt.Args.Method, tt.Args.URL, nil)
 			} else {
@@ -1059,7 +1064,7 @@ func TestSpeakeasy_EchoMiddleware_PathHint_Success(t *testing.T) {
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
 
-			sdkInstance := speakeasy.New(speakeasy.Config{
+			sdkInstance, err := speakeasy.New(speakeasy.Config{
 				APIKey:    testAPIKey,
 				ApiID:     testApiID,
 				VersionID: testVersionID,
@@ -1069,6 +1074,7 @@ func TestSpeakeasy_EchoMiddleware_PathHint_Success(t *testing.T) {
 					wg.Done()
 				}),
 			})
+			assert.Nil(t, err)
 
 			r := echo.New()
 			r.Use(sdkInstance.EchoMiddleware)
@@ -1131,7 +1137,7 @@ func TestSpeakeasy_Middleware_Capture_CustomerID_Success(t *testing.T) {
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
 
-			sdkInstance := speakeasy.New(speakeasy.Config{
+			sdkInstance, err := speakeasy.New(speakeasy.Config{
 				APIKey:    testAPIKey,
 				ApiID:     testApiID,
 				VersionID: testVersionID,
@@ -1141,6 +1147,7 @@ func TestSpeakeasy_Middleware_Capture_CustomerID_Success(t *testing.T) {
 					wg.Done()
 				}),
 			})
+			assert.Nil(t, err)
 
 			w := httptest.NewRecorder()
 
