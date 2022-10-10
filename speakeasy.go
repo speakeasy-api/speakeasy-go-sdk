@@ -63,20 +63,18 @@ type Speakeasy struct {
 
 // Configure allows you to configure the default instance of the Speakeasy SDK.
 // Use this if you will use the same API Key for all connected APIs.
-func Configure(config Config) error {
-	globalInstance, err := New(config)
+func Configure(config Config) {
+	globalInstance := New(config)
 	defaultInstance = globalInstance
-	return err
 }
 
 // New creates a new instance of the Speakeasy SDK.
 // This allows you to create multiple instances of the SDK
 // for specifying different API Keys for different APIs.
-func New(config Config) (*Speakeasy, error) {
+func New(config Config) *Speakeasy {
 	s := &Speakeasy{}
-	err := s.configure(config)
-
-	return s, err
+	s.configure(config)
+	return s
 }
 
 func GetEmbedAccessToken(ctx context.Context, req *embedaccesstoken.EmbedAccessTokenRequest) (string, error) {
@@ -95,7 +93,7 @@ func (s *Speakeasy) Close() error {
 	return s.grpcClient.conn.Close()
 }
 
-func (s *Speakeasy) configure(cfg Config) error {
+func (s *Speakeasy) configure(cfg Config) {
 	mustValidateConfig(cfg)
 
 	// The below environment variables allow the overriding of the location of the ingest server.
@@ -119,7 +117,9 @@ func (s *Speakeasy) configure(cfg Config) error {
 
 	grpcClient, err := newGRPCClient(context.Background(), s.config.APIKey, configuredServerURL, secure, s.config.GRPCDialer)
 	s.grpcClient = grpcClient
-	return err
+	if err != nil {
+		panic(err)
+	}
 }
 
 func mustValidateConfig(cfg Config) {
