@@ -69,8 +69,7 @@ func TestConfigure_Success(t *testing.T) {
 				os.Setenv("SPEAKEASY_SERVER_SECURE", strconv.FormatBool(*tt.fields.envSecure))
 			}
 
-			sdkInstance, err := speakeasy.New(tt.args.config)
-			assert.Nil(t, err)
+			sdkInstance := speakeasy.New(tt.args.config)
 			assert.NotNil(t, sdkInstance)
 
 			config := sdkInstance.ExportGetSpeakeasyConfig()
@@ -164,7 +163,7 @@ func TestConfigure_Error(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.PanicsWithError(t, tt.wantErr, func() {
-				_, _ = speakeasy.New(tt.args.config)
+				_ = speakeasy.New(tt.args.config)
 			})
 		})
 	}
