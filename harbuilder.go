@@ -209,7 +209,6 @@ func (h *harBuilder) getHarResponse(ctx context.Context, cw *captureWriter, r *h
 		contentLength := cw.origResW.Header().Get("Content-Length")
 		if contentLength != "" {
 			var err error
-			//nolint:gomnd
 			bodySize, err = strconv.ParseInt(contentLength, 10, 64)
 			if err != nil {
 				bodySize = -1

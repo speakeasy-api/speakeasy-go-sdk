@@ -5,7 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"log"
 	"math/rand"
 	"net"
@@ -83,7 +83,7 @@ const (
 func loadTestData(t *testing.T) []test {
 	t.Helper()
 
-	files, err := ioutil.ReadDir("testdata")
+	files, err := os.ReadDir("testdata")
 	require.NoError(t, err)
 
 	tests := []test{}
@@ -91,14 +91,14 @@ func loadTestData(t *testing.T) []test {
 		if strings.HasSuffix(file.Name(), "_input.json") {
 			baseName := strings.TrimSuffix(file.Name(), "_input.json")
 
-			inputData, err := ioutil.ReadFile("testdata/" + file.Name())
+			inputData, err := os.ReadFile("testdata/" + file.Name())
 			require.NoError(t, err)
 
 			tt := test{}
 			err = json.Unmarshal(inputData, &tt)
 			require.NoError(t, err)
 
-			outputData, err := ioutil.ReadFile("testdata/" + baseName + "_output.json")
+			outputData, err := os.ReadFile("testdata/" + baseName + "_output.json")
 			require.NoError(t, err)
 
 			outputDataMinified := bytes.NewBuffer([]byte{})
@@ -221,7 +221,7 @@ func TestSpeakeasy_Middleware_Capture_Success(t *testing.T) {
 				}
 
 				if req.Body != nil {
-					data, err := ioutil.ReadAll(req.Body)
+					data, err := io.ReadAll(req.Body)
 					assert.NoError(t, err)
 					assert.Equal(t, tt.Args.Body, string(data))
 				}
@@ -719,7 +719,7 @@ func TestSpeakeasy_GinMiddleware_Success(t *testing.T) {
 				}
 
 				if ctx.Request.Body != nil {
-					data, err := ioutil.ReadAll(ctx.Request.Body)
+					data, err := io.ReadAll(ctx.Request.Body)
 					assert.NoError(t, err)
 					assert.Equal(t, tt.Args.Body, string(data))
 				}
@@ -959,7 +959,7 @@ func TestSpeakeasy_EchoMiddleware_Success(t *testing.T) {
 				}
 
 				if c.Request().Body != nil {
-					data, err := ioutil.ReadAll(c.Request().Body)
+					data, err := io.ReadAll(c.Request().Body)
 					assert.NoError(t, err)
 					assert.Equal(t, tt.Args.Body, string(data))
 				}

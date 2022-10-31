@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"time"
@@ -48,7 +47,7 @@ func (s *Speakeasy) handleRequestResponseError(w http.ResponseWriter, r *http.Re
 		// (as io.Reader is a stream and can only be read once) but we are potentially storing a large request (such as a file upload)
 		// in memory, so we may need to allow the middleware to be configured to not read the body or have a max size
 		tee := io.TeeReader(r.Body, cw.GetRequestWriter())
-		r.Body = ioutil.NopCloser(tee)
+		r.Body = io.NopCloser(tee)
 	}
 
 	ctx, c := contextWithController(r.Context(), s)
@@ -81,7 +80,7 @@ func (s *Speakeasy) captureRequestResponse(cw *captureWriter, r *http.Request, s
 	if cw.IsReqValid() && cw.GetReqBuffer().Len() == 0 && r.Body != nil {
 		// Read the body just in case it was not read in the handler
 		//nolint: errcheck
-		io.Copy(ioutil.Discard, r.Body)
+		io.Copy(io.Discard, r.Body)
 	}
 
 	harData, err := json.Marshal(s.harBuilder.buildHarFile(ctx, cw, r, startTime, c))

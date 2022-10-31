@@ -1,6 +1,6 @@
 module github.com/speakeasy-api/speakeasy-go-sdk
 
-go 1.14
+go 1.16
 
 require (
 	github.com/chromedp/cdproto v0.0.0-20220629234738-4cfc9cdeeb92
