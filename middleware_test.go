@@ -29,6 +29,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/test/bufconn"
+	httptrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http"
 )
 
 func TestMain(m *testing.M) {
@@ -1155,6 +1156,70 @@ func TestSpeakeasy_Middleware_Capture_CustomerID_Success(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 				handled = true
 			})).ServeHTTP(w, req)
+
+			wg.Wait()
+
+			assert.True(t, handled, "middleware did not call handler")
+			assert.True(t, captured, "middleware did not capture request")
+			assert.Equal(t, http.StatusOK, w.Code)
+		})
+	}
+}
+
+func TestSpeakeasy_Middleware_DataDogHttpTraceServerMux_PathHint_Success(t *testing.T) {
+	type args struct {
+		path string
+		url  string
+	}
+	tests := []struct {
+		name         string
+		args         args
+		wantPathHint string
+	}{
+		{
+			name: "captures simple path hint from DefaultServerMux",
+			args: args{
+				path: "/user",
+				url:  "http://test.com/user",
+			},
+			wantPathHint: "/user",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			captured := false
+			handled := false
+
+			speakeasy.ExportSetTimeNow(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC))
+			speakeasy.ExportSetTimeSince(1 * time.Millisecond)
+
+			wg := &sync.WaitGroup{}
+			wg.Add(1)
+
+			sdkInstance := speakeasy.New(speakeasy.Config{
+				APIKey:    testAPIKey,
+				ApiID:     testApiID,
+				VersionID: testVersionID,
+				GRPCDialer: dialer(func(ctx context.Context, req *ingest.IngestRequest) {
+					assert.Equal(t, tt.wantPathHint, req.PathHint)
+					captured = true
+					wg.Done()
+				}),
+			})
+
+			r := httptrace.NewServeMux()
+
+			r.Handle(tt.args.path, sdkInstance.MiddlewareWithMux(r, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				handled = true
+			})))
+
+			w := httptest.NewRecorder()
+
+			req, err := http.NewRequest(http.MethodGet, tt.args.url, nil)
+			assert.NoError(t, err)
+
+			r.ServeHTTP(w, req)
 
 			wg.Wait()
 
