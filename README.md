@@ -4,17 +4,18 @@
 
 Speakeasy is your API Platform team as a service. Use our drop in SDK to manage all your API Operations including embeds for request logs and usage dashboards, test case generation from traffic, and understanding API drift.
 
-The Speakeasy Go SDK for evaluating API requests/responses. Compatible with any API framework implemented on top of Go's native http library. 
+The Speakeasy Go SDK for evaluating API requests/responses. Compatible with any API framework implemented on top of Go's native http library.
 
 ## Requirements
 
-Supported routers: 
+Supported routers:
 
 * gorilla/mux
 * go-chi/chi
 * http.DefaultServerMux
+* Routers based on the net/http ServeMux interface such as DataDog's httptrace - https://pkg.go.dev/gopkg.in/DataDog/dd-trace-go.v1@v1.45.1/contrib/net/http
 
-We also support custom HTTP frameworks: 
+We also support custom HTTP frameworks:
 
 * gin-gonic/gin
 * labstack/echo

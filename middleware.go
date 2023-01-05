@@ -52,6 +52,31 @@ func (s *Speakeasy) Middleware(next http.Handler) http.Handler {
 	})
 }
 
+// Mux represents a router that conforms to the net/http ServeMux interface.
+type Mux interface {
+	Handler(r *http.Request) (h http.Handler, pattern string)
+}
+
+// MiddlewareWithMux setups up the default SDK instance to start capturing requests from routers based on the net/http ServeMux interface
+// This should be used when not using the http.DefaultServeMux, such as when using a custom mux or something like DataDog's httptrace.NewServeMux().
+func MiddlewareWithMux(mux Mux, next http.Handler) http.Handler {
+	return defaultInstance.MiddlewareWithMux(mux, next)
+}
+
+// MiddlewareWithMux setups up the current instance of the SDK to start capturing requests from routers based on the net/http ServeMux interface
+// This should be used when not using the http.DefaultServeMux, such as when using a custom mux or something like DataDog's httptrace.NewServeMux().
+func (s *Speakeasy) MiddlewareWithMux(mux Mux, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		s.handleRequestResponse(w, r, next.ServeHTTP, func(r *http.Request) string {
+			var pathHint string
+
+			_, pathHint = mux.Handler(r)
+
+			return pathHint
+		})
+	})
+}
+
 // GinMiddleware setups up the default SDK instance to start capturing requests from the gin http framework.
 func GinMiddleware(c *gin.Context) {
 	defaultInstance.GinMiddleware(c)
