@@ -55,9 +55,19 @@ func main() {
 }
 ```
 
+**Note:** Additional middlewares are provided for different routers.
+
 Build and deploy your app and that's it. Your API is being tracked in the Speakeasy workspace you just created
 and will be visible on the dashboard next time you log in. Visit our [docs site](https://docs.speakeasyapi.dev/) to
 learn more.
+
+#### Mux-based routers
+
+For middlewares based on the net/http `ServeMux` interface, use `speakeasy.MiddlewareWithMux`.
+
+#### Gin
+
+For the [gin](https://github.com/gin-gonic/gin) framework, use `speakeasy.GinMiddlware`.
 
 ### Advanced configuration
 
@@ -118,9 +128,10 @@ To help the SDK in these situations you can provide path hints per request handl
 ```go
 func MyHandler(w http.ResponseWriter, r *http.Request) {
 	// Provide a path hint for the request using the OpenAPI Path Templating format: https://swagger.io/specification/#path-templating-matching
-	ctrl := speakeasy.MiddlewareController(req)
-	ctrl.PathHint("/v1/users/{id}")
-	
+	ctrl, ok := speakeasy.MiddlewareController(req)
+	if ok {
+	    ctrl.PathHint("/v1/users/{id}")
+    }
 	// the rest of your handlers code
 }
 ```
@@ -138,9 +149,10 @@ To help associate requests with customers/users of your APIs you can provide a c
 
 ```go
 func MyHandler(w http.ResponseWriter, r *http.Request) {
-	ctrl := speakeasy.MiddlewareController(req)
-	ctrl.CustomerID("a-customers-id") // This customer ID will be used to associate this instance of a request with your customers/users
-	
+	ctrl, ok := speakeasy.MiddlewareController(req)
+    if ok {
+        ctrl.CustomerID("a-customers-id") // This customer ID will be used to associate this instance of a request with your customers/users
+    }
 	// the rest of your handlers code
 }
 ```
@@ -157,7 +169,7 @@ But if you would like to be more selective you can mask certain sensitive data u
 
 ```go
 func MyHandler(w http.ResponseWriter, r *http.Request) {
-	ctrl := speakeasy.MiddlewareController(req)
+	ctrl, _ := speakeasy.MiddlewareController(req)
 	ctrl.Masking(speakeasy.WithRequestHeaderMask("Authorization")) // Mask the Authorization header in the request
 	
 	// the rest of your handlers code
@@ -190,7 +202,7 @@ r.Use(speakeasy.Middleware)
 r.Use(func (next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Mask the Authorization header in the request for all requests served by this middleware
-		ctrl := speakeasy.MiddlewareController(req)
+		ctrl, _ := speakeasy.MiddlewareController(req)
 		ctrl.Masking(speakeasy.WithRequestHeaderMask("Authorization"))
 	})
 })
@@ -233,7 +245,7 @@ accessToken, err := storeSDKInstance.GetEmbedAccessToken(ctx, &embedaccesstoken.
 
 // Or finally if you have a handler that you would like to generate an access token from, you can get the SDK instance for that handler from the middleware controller and use the `GetEmbedAccessToken` function it.
 func MyHandler(w http.ResponseWriter, r *http.Request) {
-	ctrl := speakeasy.MiddlewareController(req)
+	ctrl, _ := speakeasy.MiddlewareController(req)
 	accessToken, err := ctrl.GetSDKInstance().GetEmbedAccessToken(ctx, &embedaccesstoken.EmbedAccessTokenRequest{
 		Filters: []*embedaccesstoken.EmbedAccessTokenRequest_Filter{
 			{

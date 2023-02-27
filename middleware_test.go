@@ -72,7 +72,7 @@ type test struct {
 	Name    string `json:"name"`
 	Fields  fields `json:"fields"`
 	Args    args   `json:"args"`
-	WantHAR string
+	WantHAR string `json:"want_har"`
 }
 
 const (
@@ -159,7 +159,7 @@ func TestSpeakeasy_Middleware_Capture_Success(t *testing.T) {
 			})
 
 			h := sdkInstance.Middleware(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-				ctrl := speakeasy.MiddlewareController(req)
+				ctrl, _ := speakeasy.MiddlewareController(req)
 
 				if tt.Args.QueryStringMasks != nil {
 					for k, v := range tt.Args.QueryStringMasks {
@@ -457,7 +457,7 @@ func TestSpeakeasy_Middleware_GorillaMux_PathHint_Success(t *testing.T) {
 
 			r.Methods(http.MethodGet).Path(tt.args.path).HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 				if tt.args.devHint != "" {
-					ctrl := speakeasy.MiddlewareController(req)
+					ctrl, _ := speakeasy.MiddlewareController(req)
 					require.NotNil(t, ctrl)
 					ctrl.PathHint(tt.args.devHint)
 				}
@@ -657,7 +657,7 @@ func TestSpeakeasy_GinMiddleware_Success(t *testing.T) {
 			r.Use(sdkInstance.GinMiddleware)
 
 			r.Any("/*path", func(ctx *gin.Context) {
-				ctrl := speakeasy.MiddlewareController(ctx.Request)
+				ctrl, _ := speakeasy.MiddlewareController(ctx.Request)
 
 				if tt.Args.QueryStringMasks != nil {
 					for k, v := range tt.Args.QueryStringMasks {
@@ -834,7 +834,7 @@ func TestSpeakeasy_GinMiddleware_PathHint_Success(t *testing.T) {
 
 			r.Handle(http.MethodGet, tt.args.path, func(ctx *gin.Context) {
 				if tt.args.devHint != "" {
-					ctrl := speakeasy.MiddlewareController(ctx.Request)
+					ctrl, _ := speakeasy.MiddlewareController(ctx.Request)
 					require.NotNil(t, ctrl)
 					ctrl.PathHint(tt.args.devHint)
 				}
@@ -897,7 +897,7 @@ func TestSpeakeasy_EchoMiddleware_Success(t *testing.T) {
 			r.Use(sdkInstance.EchoMiddleware)
 
 			r.Any("/*", func(c echo.Context) error {
-				ctrl := speakeasy.MiddlewareController(c.Request())
+				ctrl, _ := speakeasy.MiddlewareController(c.Request())
 
 				if tt.Args.QueryStringMasks != nil {
 					for k, v := range tt.Args.QueryStringMasks {
@@ -1075,7 +1075,7 @@ func TestSpeakeasy_EchoMiddleware_PathHint_Success(t *testing.T) {
 			r.Use(sdkInstance.EchoMiddleware)
 			r.Match([]string{http.MethodGet}, tt.args.path, func(c echo.Context) error {
 				if tt.args.devHint != "" {
-					ctrl := speakeasy.MiddlewareController(c.Request())
+					ctrl, _ := speakeasy.MiddlewareController(c.Request())
 					require.NotNil(t, ctrl)
 					ctrl.PathHint(tt.args.devHint)
 				}
@@ -1149,7 +1149,7 @@ func TestSpeakeasy_Middleware_Capture_CustomerID_Success(t *testing.T) {
 			assert.NoError(t, err)
 
 			sdkInstance.Middleware(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-				ctrl := speakeasy.MiddlewareController(req)
+				ctrl, _ := speakeasy.MiddlewareController(req)
 				require.NotNil(t, ctrl)
 				ctrl.CustomerID(tt.args.customerID)
 
