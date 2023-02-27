@@ -225,8 +225,8 @@ type controller struct {
 // MiddlewareController will return the speakeasy middleware controller from the current request,
 // if the current request is monitored by the speakeasy middleware.
 func MiddlewareController(r *http.Request) (*controller, bool) {
-	c, ok := r.Context().Value(controllerKey).(*controller)
-	return c, ok
+	c, _ := r.Context().Value(controllerKey).(*controller)
+	return c, c != nil
 }
 
 // PathHint will allow you to provide a path hint for the current request.
