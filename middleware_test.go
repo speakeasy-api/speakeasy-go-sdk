@@ -72,7 +72,7 @@ type test struct {
 	Name    string `json:"name"`
 	Fields  fields `json:"fields"`
 	Args    args   `json:"args"`
-	WantHAR string
+	WantHAR string `json:"want_har"`
 }
 
 const (
