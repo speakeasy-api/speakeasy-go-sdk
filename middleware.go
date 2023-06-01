@@ -24,12 +24,16 @@ func Middleware(next http.Handler) http.Handler {
 func (s *Speakeasy) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		s.handleRequestResponse(w, r, next.ServeHTTP, func(r *http.Request) string {
-			var pathHint string
+			// First check if it matches any OpenAPI document provided
+			pathHint := s.MatchOpenAPIPath(r)
+			if pathHint != "" {
+				return pathHint
+			}
 
 			// First check gorilla/mux for a path hint
 			route := mux.CurrentRoute(r)
 			if route != nil {
-				pathHint, _ = route.GetPathTemplate()
+				pathHint, _ := route.GetPathTemplate()
 				if pathHint != "" {
 					return pathHint
 				}
@@ -38,7 +42,7 @@ func (s *Speakeasy) Middleware(next http.Handler) http.Handler {
 			// Check chi router for a path hint
 			routeContext := chi.RouteContext(r.Context())
 			if routeContext != nil {
-				pathHint = routeContext.RoutePattern()
+				pathHint := routeContext.RoutePattern()
 				if pathHint != "" {
 					return pathHint
 				}
@@ -68,7 +72,10 @@ func MiddlewareWithMux(mux Mux, next http.Handler) http.Handler {
 func (s *Speakeasy) MiddlewareWithMux(mux Mux, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		s.handleRequestResponse(w, r, next.ServeHTTP, func(r *http.Request) string {
-			var pathHint string
+			pathHint := s.MatchOpenAPIPath(r)
+			if pathHint != "" {
+				return pathHint
+			}
 
 			_, pathHint = mux.Handler(r)
 
@@ -91,6 +98,11 @@ func (s *Speakeasy) GinMiddleware(c *gin.Context) {
 		c.Next()
 	}, func(c *gin.Context) func(r *http.Request) string {
 		return func(r *http.Request) string {
+			pathHint := s.MatchOpenAPIPath(r)
+			if pathHint != "" {
+				return pathHint
+			}
+
 			return c.FullPath()
 		}
 	}(c))
@@ -110,6 +122,11 @@ func (s *Speakeasy) EchoMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 
 			return next(c)
 		}, func(r *http.Request) string {
+			pathHint := s.MatchOpenAPIPath(r)
+			if pathHint != "" {
+				return pathHint
+			}
+
 			return c.Path()
 		})
 	}

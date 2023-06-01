@@ -5,9 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	"regexp"
 
+	"github.com/pb33f/libopenapi"
+	"github.com/pb33f/libopenapi-validator/paths"
+	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"github.com/speakeasy-api/speakeasy-schemas/grpc/go/registry/embedaccesstoken"
 )
 
@@ -49,8 +53,9 @@ type Config struct {
 	// ApiID is the ID of the Api to associate any requests captured by this instance of the SDK to.
 	ApiID string
 	// VersionID is the ID of the Api Version to associate any requests captured by this instance of the SDK to.
-	VersionID  string
-	GRPCDialer func() func(context.Context, string) (net.Conn, error)
+	VersionID       string
+	OpenAPIDocument []byte
+	GRPCDialer      func() func(context.Context, string) (net.Conn, error)
 }
 
 // Speakeasy is the concrete type for the Speakeasy SDK.
@@ -59,6 +64,7 @@ type Speakeasy struct {
 	config     Config
 	harBuilder harBuilder
 	grpcClient *GRPCClient
+	doc        *libopenapi.DocumentModel[v3.Document]
 }
 
 // Configure allows you to configure the default instance of the Speakeasy SDK.
@@ -93,6 +99,17 @@ func (s *Speakeasy) Close() error {
 	return s.grpcClient.conn.Close()
 }
 
+func (s *Speakeasy) MatchOpenAPIPath(r *http.Request) string {
+	if s.doc != nil {
+		_, _, pathHint := paths.FindPath(r, &s.doc.Model)
+		if pathHint != "" {
+			return pathHint
+		}
+	}
+
+	return ""
+}
+
 func (s *Speakeasy) configure(cfg Config) {
 	mustValidateConfig(cfg)
 
@@ -119,6 +136,20 @@ func (s *Speakeasy) configure(cfg Config) {
 	s.grpcClient = grpcClient
 	if err != nil {
 		panic(err)
+	}
+
+	if len(s.config.OpenAPIDocument) > 0 {
+		doc, err := libopenapi.NewDocument(s.config.OpenAPIDocument)
+		if err != nil {
+			panic(fmt.Errorf("failed to parse OpenAPI document: %w", err))
+		}
+
+		v3Doc, errs := doc.BuildV3Model()
+		if len(errs) > 0 {
+			panic(fmt.Sprintf("failed to build OpenAPI v3 model: %v", errs))
+		}
+
+		s.doc = v3Doc
 	}
 }
 
