@@ -7,16 +7,17 @@ import (
 )
 
 type captureWriter struct {
-	reqW         *requestWriter
-	origResW     http.ResponseWriter
-	resW         *responseWriter
-	reqBuf       *bytes.Buffer
-	resBuf       *bytes.Buffer
-	reqValid     bool
-	resValid     bool
-	status       int
-	responseSize int
-	maxBuffer    int
+	reqW          *requestWriter
+	origResW      http.ResponseWriter
+	resW          *responseWriter
+	reqBuf        *bytes.Buffer
+	resBuf        *bytes.Buffer
+	reqValid      bool
+	resValid      bool
+	status        int
+	statusWritten bool
+	responseSize  int
+	maxBuffer     int
 }
 
 func NewCaptureWriter(origResW http.ResponseWriter, maxBuffer int) *captureWriter {
@@ -112,8 +113,11 @@ func (c *captureWriter) writeRes(p []byte) (int, error) {
 }
 
 func (c *captureWriter) writeHeader(statusCode int) {
-	c.status = statusCode
-	c.origResW.WriteHeader(statusCode)
+	if !c.statusWritten {
+		c.status = statusCode
+		c.statusWritten = true
+		c.origResW.WriteHeader(statusCode)
+	}
 }
 
 type requestWriter struct {

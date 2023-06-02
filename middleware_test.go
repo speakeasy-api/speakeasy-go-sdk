@@ -1230,6 +1230,105 @@ func TestSpeakeasy_Middleware_DataDogHttpTraceServerMux_PathHint_Success(t *test
 	}
 }
 
+func TestSpeakeasy_Middleware_Capture_OpenAPIPathHint_Success(t *testing.T) {
+	type args struct {
+		Method string
+		URL    string
+		Doc    string
+	}
+	tests := []struct {
+		Name         string
+		Args         args
+		WantPathHint string
+	}{
+		{
+			Name: "captures simple path hint from OpenAPI",
+			Args: args{
+				Method: http.MethodGet,
+				URL:    "http://test.com/user",
+				Doc: `openapi: 3.0.0
+paths:
+  /user:
+    get:
+      responses:
+        '200':
+          description: OK`,
+			},
+			WantPathHint: "/user",
+		},
+		{
+			Name: "captures more complex path hint from OpenAPI",
+			Args: args{
+				Method: http.MethodGet,
+				URL:    "http://test.com/user/1/send",
+				Doc: `openapi: 3.0.0
+paths:
+  /user/{id}/{action}:
+    get:
+      responses:
+        '200':
+          description: OK`,
+			},
+			WantPathHint: "/user/{id}/{action}",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.Name, func(t *testing.T) {
+			speakeasy.ExportSetMaxCaptureSize(9437184)
+
+			captured := false
+			handled := false
+
+			speakeasy.ExportSetTimeNow(time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC))
+			speakeasy.ExportSetTimeSince(1 * time.Millisecond)
+
+			wg := &sync.WaitGroup{}
+			wg.Add(1)
+
+			sdkInstance := speakeasy.New(speakeasy.Config{
+				APIKey:    testAPIKey,
+				ApiID:     testApiID,
+				VersionID: testVersionID,
+				GRPCDialer: dialer(func(ctx context.Context, req *ingest.IngestRequest) {
+					md, ok := metadata.FromIncomingContext(ctx)
+					assert.True(t, ok)
+
+					apiKeys := md.Get("x-api-key")
+					assert.Contains(t, apiKeys, testAPIKey)
+
+					assert.Equal(t, testApiID, req.ApiId)
+					assert.Equal(t, testVersionID, req.VersionId)
+					assert.Equal(t, tt.WantPathHint, req.PathHint)
+					captured = true
+					wg.Done()
+				}),
+				OpenAPIDocument: []byte(tt.Args.Doc),
+			})
+
+			h := sdkInstance.Middleware(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				handled = true
+			}))
+
+			w := httptest.NewRecorder()
+
+			var req *http.Request
+			var err error
+			req, err = http.NewRequest(tt.Args.Method, tt.Args.URL, nil)
+			assert.NoError(t, err)
+
+			h.ServeHTTP(w, req)
+
+			wg.Wait()
+
+			assert.True(t, handled, "middleware did not call handler")
+			assert.True(t, captured, "middleware did not capture request")
+
+			assert.Equal(t, http.StatusOK, w.Code)
+		})
+	}
+}
+
 func dialer(handlerFunc func(ctx context.Context, req *ingest.IngestRequest)) func() func(context.Context, string) (net.Conn, error) {
 	return func() func(context.Context, string) (net.Conn, error) {
 		listener := bufconn.Listen(1024 * 1024)

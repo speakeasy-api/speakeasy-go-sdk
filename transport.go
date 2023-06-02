@@ -11,9 +11,11 @@ import (
 	"github.com/speakeasy-api/speakeasy-schemas/grpc/go/registry/ingest"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 var GRPCIngestTimeout = 1 * time.Second
@@ -48,7 +50,9 @@ func (c *GRPCClient) SendToIngest(ctx context.Context, req *ingest.IngestRequest
 
 	_, err := ingest.NewIngestServiceClient(c.conn).Ingest(ctx, req)
 	if err != nil {
-		log.From(ctx).Error("speakeasy-sdk: failed to send ingest request", zap.Error(err))
+		if status.Code(err) != codes.DeadlineExceeded {
+			log.From(ctx).Error("speakeasy-sdk: failed to send ingest request", zap.Error(err))
+		}
 		return
 	}
 }
