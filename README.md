@@ -1,6 +1,17 @@
-# speakeasy-go-sdk
+<div align="center">
+ <a href="https://www.speakeasy.com/" target="_blank">
+  <img width="1500" height="500" alt="Speakeasy" src="https://github.com/user-attachments/assets/0e56055b-02a3-4476-9130-4be299e5a39c" />
+ </a>
+ <br />
+ <br />
+  <div>
+   <a href="https://speakeasy.com/docs/create-client-sdks/" target="_blank"><b>Docs Quickstart</b></a>&nbsp;&nbsp;//&nbsp;&nbsp;<a href="https://go.speakeasy.com/slack" target="_blank"><b>Join us on Slack</b></a>
+  </div>
+ <br />
 
-![180100416-b66263e6-1607-4465-b45d-0e298a67c397](https://user-images.githubusercontent.com/68016351/181640742-31ab234a-3b39-432e-b899-21037596b360.png)
+</div>
+
+# speakeasy-go-sdk
 
 Speakeasy is your API Platform team as a service. Use our drop in SDK to manage all your API Operations including embeds for request logs and usage dashboards, schema generation from traffic, and understanding API drift.
 
